@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showLoading, dismissToast, showError, showSuccess } from "@/utils/toast";
 
+// NOTE: Replace 'YOUR_EXTENSION_ID' with the actual ID 'nbfcilcgmdlkifknmlnonimkhmkpgigj'
+// We use the full path including popup.html as required for Manifest V3 redirects.
+const REDIRECT_URL = "chrome-extension://nbfcilcgmdlkifknmlnonimkhmkpgigj/popup.html";
+
 const AuthForm: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -29,6 +33,9 @@ const AuthForm: React.FC = () => {
         const { error: signupError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: REDIRECT_URL, // Explicitly set redirect URL for confirmation email
+          },
         });
         error = signupError;
       }
