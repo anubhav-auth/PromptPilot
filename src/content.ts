@@ -31,7 +31,7 @@ function showIcon(target: HTMLElement) {
 
   icon.addEventListener("click", (e) => {
     e.stopPropagation();
-    openModal();
+    openModal(target);
   });
 
   document.body.appendChild(icon);
@@ -45,27 +45,52 @@ function hideIcon() {
   }
 }
 
-function openModal() {
+function openModal(target: HTMLElement) {
   if (modalIframe) return;
 
   modalIframe = document.createElement("iframe");
   modalIframe.src = chrome.runtime.getURL("modal.html");
-  modalIframe.style.position = "fixed";
-  modalIframe.style.top = "0";
-  modalIframe.style.left = "0";
-  modalIframe.style.width = "100%";
-  modalIframe.style.height = "100%";
+  
+  // Style the iframe to be a floating box
+  modalIframe.style.position = "absolute";
   modalIframe.style.border = "none";
   modalIframe.style.zIndex = "9999";
   modalIframe.style.backgroundColor = "transparent";
+  modalIframe.style.width = "450px";
+  modalIframe.style.height = "300px";
+  modalIframe.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
+  modalIframe.style.borderRadius = "8px";
+  modalIframe.style.overflow = "hidden";
+
+  // Position the iframe near the target element
+  const rect = target.getBoundingClientRect();
+  const top = window.scrollY + rect.bottom + 8; // 8px below the target
+  const left = window.scrollX + rect.right - 450; // Align right edge with target's right edge
   
+  modalIframe.style.top = `${top}px`;
+  // Ensure the modal doesn't render off-screen
+  modalIframe.style.left = `${Math.max(8, left)}px`;
+
   document.body.appendChild(modalIframe);
+
+  // Add a listener to close the modal if the user clicks outside
+  document.addEventListener('click', handleClickOutside, true);
 }
 
 function closeModal() {
   if (modalIframe) {
     modalIframe.remove();
     modalIframe = null;
+  }
+  hideIcon();
+  document.removeEventListener('click', handleClickOutside, true);
+}
+
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as Node;
+  // Close if the click is outside the iframe and not on the icon
+  if (modalIframe && !modalIframe.contains(target) && activeIcon && !activeIcon.contains(target)) {
+    closeModal();
   }
 }
 
