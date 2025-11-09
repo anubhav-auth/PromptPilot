@@ -2,7 +2,7 @@
 
 let activeIcon: HTMLElement | null = null;
 let modalIframe: HTMLIFrameElement | null = null;
-let activeInput: HTMLElement | null = null; // New variable to store the active input element
+let activeInput: HTMLElement | null = null;
 
 const TRIGGER_PHRASE = "improve:";
 
@@ -32,7 +32,7 @@ function showIcon(target: HTMLElement) {
 
   icon.addEventListener("click", (e) => {
     e.stopPropagation();
-    activeInput = target; // Store the target input element
+    activeInput = target;
     openModal(target);
   });
 
@@ -47,13 +47,35 @@ function hideIcon() {
   }
 }
 
+function getElementText(element: HTMLElement): string {
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    return element.value;
+  } else if (element.isContentEditable) {
+    return element.textContent || "";
+  }
+  return "";
+}
+
+function setElementText(element: HTMLElement, newText: string) {
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    element.value = newText;
+  } else if (element.isContentEditable) {
+    element.textContent = newText;
+  }
+  // Dispatch an input event to notify any listeners on the element
+  element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+}
+
 function openModal(target: HTMLElement) {
   if (modalIframe) return;
 
+  const fullText = getElementText(target);
+  const triggerIndex = fullText.lastIndexOf(TRIGGER_PHRASE);
+  const textToImprove = triggerIndex !== -1 ? fullText.substring(triggerIndex + TRIGGER_PHRASE.length) : "";
+
   modalIframe = document.createElement("iframe");
-  modalIframe.src = chrome.runtime.getURL("modal.html");
+  modalIframe.src = chrome.runtime.getURL(`modal.html?text=${encodeURIComponent(textToImprove.trim())}`);
   
-  // Style the iframe to be a floating box
   modalIframe.style.position = "absolute";
   modalIframe.style.border = "none";
   modalIframe.style.zIndex = "9999";
@@ -64,18 +86,14 @@ function openModal(target: HTMLElement) {
   modalIframe.style.borderRadius = "8px";
   modalIframe.style.overflow = "hidden";
 
-  // Position the iframe near the target element
   const rect = target.getBoundingClientRect();
-  const top = window.scrollY + rect.bottom + 8; // 8px below the target
-  const left = window.scrollX + rect.right - 450; // Align right edge with target's right edge
+  const top = window.scrollY + rect.bottom + 8;
+  const left = window.scrollX + rect.right - 450;
   
   modalIframe.style.top = `${top}px`;
-  // Ensure the modal doesn't render off-screen
   modalIframe.style.left = `${Math.max(8, left)}px`;
 
   document.body.appendChild(modalIframe);
-
-  // Add a listener to close the modal if the user clicks outside
   document.addEventListener('click', handleClickOutside, true);
 }
 
@@ -87,7 +105,6 @@ function closeModal() {
   hideIcon();
   document.removeEventListener('click', handleClickOutside, true);
   
-  // Restore focus to the active input element
   if (activeInput) {
     activeInput.focus();
     activeInput = null;
@@ -96,32 +113,33 @@ function closeModal() {
 
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as Node;
-  // Close if the click is outside the iframe and not on the icon
   if (modalIframe && !modalIframe.contains(target) && activeIcon && !activeIcon.contains(target)) {
     closeModal();
   }
 }
 
-// Listen for close messages from the iframe
 window.addEventListener("message", (event) => {
   if (event.source !== modalIframe?.contentWindow) {
     return;
   }
+  
   if (event.data.type === "prompt-pilot-close-modal") {
+    closeModal();
+  } else if (event.data.type === "prompt-pilot-replace-text" && activeInput) {
+    const fullText = getElementText(activeInput);
+    const triggerIndex = fullText.lastIndexOf(TRIGGER_PHRASE);
+    const textBeforeTrigger = triggerIndex !== -1 ? fullText.substring(0, triggerIndex) : fullText;
+    
+    const newText = textBeforeTrigger + event.data.text;
+    setElementText(activeInput, newText);
+    
     closeModal();
   }
 }, false);
 
-
 function handleInput(event: Event) {
   const target = event.target as HTMLElement;
-  let text = "";
-
-  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
-    text = target.value;
-  } else if (target.isContentEditable) {
-    text = target.textContent || "";
-  }
+  const text = getElementText(target);
 
   if (text.includes(TRIGGER_PHRASE)) {
     showIcon(target);
@@ -139,9 +157,9 @@ function observeDocument() {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node instanceof HTMLElement) {
-          const inputs = node.querySelectorAll('textarea, [contenteditable="true"]');
+          const inputs = node.querySelectorAll('textarea, input, [contenteditable="true"]');
           inputs.forEach(el => attachListener(el as HTMLElement));
-          if (node.matches('textarea, [contenteditable="true"]')) {
+          if (node.matches('textarea, input, [contenteditable="true"]')) {
             attachListener(node as HTMLElement);
           }
         }
@@ -156,7 +174,7 @@ function observeDocument() {
 }
 
 function init() {
-  document.querySelectorAll('textarea, [contenteditable="true"]').forEach((el) => {
+  document.querySelectorAll('textarea, input, [contenteditable="true"]').forEach((el) => {
     attachListener(el as HTMLElement);
   });
   observeDocument();
