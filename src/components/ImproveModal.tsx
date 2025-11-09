@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Copy as CopyIcon, X, Lock } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
@@ -28,14 +29,19 @@ interface ImproveModalProps {
   onClose: () => void;
 }
 
-type Intent =
-  | "fix-grammar"
-  | "expand"
-  | "summarize"
-  | "change-tone"
-  | "code-expert"
-  | "socratic-tutor";
-const PRO_INTENTS: Intent[] = ["code-expert", "socratic-tutor"];
+const TEXT_INTENTS = [
+  "fix-grammar",
+  "expand",
+  "summarize",
+  "change-tone",
+] as const;
+const PROMPT_INTENTS = ["code-expert", "socratic-tutor"] as const;
+
+type TextIntent = (typeof TEXT_INTENTS)[number];
+type PromptIntent = (typeof PROMPT_INTENTS)[number];
+type Intent = TextIntent | PromptIntent;
+
+const PRO_INTENTS_LIST: PromptIntent[] = ["code-expert", "socratic-tutor"];
 
 type Structure = "paragraph" | "bullet-points" | "list";
 type Tone = "professional" | "casual" | "formal";
@@ -255,15 +261,15 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
     }
   };
 
-  const isProIntentSelected = PRO_INTENTS.includes(intent);
+  const isProIntentSelected = PRO_INTENTS_LIST.includes(intent as PromptIntent);
   const improveButtonDisabled =
     !!error || isLoading || (isProIntentSelected && !userPlan?.canUsePro);
 
   return (
     <Card className="w-full h-full relative border-none bg-background rounded-lg flex flex-col overflow-hidden">
       <CardHeader className="flex-shrink-0">
-        <CardTitle>Improve Text</CardTitle>
-        <CardDescription>Refine your writing with AI.</CardDescription>
+        <CardTitle>Improve with AI</CardTitle>
+        <CardDescription>Refine your writing or prompts.</CardDescription>
         <Button
           variant="ghost"
           size="icon"
@@ -311,72 +317,108 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
           ) : (
             <TooltipProvider>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Select
-                    value={intent}
-                    onValueChange={(v) => setIntent(v as Intent)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Intent" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fix-grammar">Fix Grammar</SelectItem>
-                      <SelectItem value="expand">Expand</SelectItem>
-                      <SelectItem value="summarize">Summarize</SelectItem>
-                      <SelectItem value="change-tone">Change Tone</SelectItem>
-                      <SelectItem
-                        value="code-expert"
-                        disabled={!userPlan?.canUsePro}
+                <Tabs
+                  defaultValue="text"
+                  onValueChange={(value) =>
+                    setIntent(
+                      value === "text" ? "fix-grammar" : "code-expert",
+                    )
+                  }
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="text">Text Improvement</TabsTrigger>
+                    <TabsTrigger value="prompt">Prompt Improvement</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="text" className="space-y-4 pt-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <Select
+                        value={intent}
+                        onValueChange={(v) => setIntent(v as Intent)}
                       >
-                        <div className="flex items-center">
-                          {!userPlan?.canUsePro && (
-                            <Lock className="h-3 w-3 mr-2" />
-                          )}
-                          Code Expert
-                        </div>
-                      </SelectItem>
-                      <SelectItem
-                        value="socratic-tutor"
-                        disabled={!userPlan?.canUsePro}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Intent" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fix-grammar">
+                            Fix Grammar
+                          </SelectItem>
+                          <SelectItem value="expand">Expand</SelectItem>
+                          <SelectItem value="summarize">Summarize</SelectItem>
+                          <SelectItem value="change-tone">
+                            Change Tone
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={structure}
+                        onValueChange={(v) => setStructure(v as Structure)}
                       >
-                        <div className="flex items-center">
-                          {!userPlan?.canUsePro && (
-                            <Lock className="h-3 w-3 mr-2" />
-                          )}
-                          Socratic Tutor
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={structure}
-                    onValueChange={(v) => setStructure(v as Structure)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Structure" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="paragraph">Paragraph</SelectItem>
-                      <SelectItem value="bullet-points">Bullet Points</SelectItem>
-                      <SelectItem value="list">Numbered List</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {intent === "change-tone" && (
-                  <Select
-                    value={tone}
-                    onValueChange={(v) => setTone(v as Tone)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="professional">Professional</SelectItem>
-                      <SelectItem value="casual">Casual</SelectItem>
-                      <SelectItem value="formal">Formal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Structure" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="paragraph">Paragraph</SelectItem>
+                          <SelectItem value="bullet-points">
+                            Bullet Points
+                          </SelectItem>
+                          <SelectItem value="list">Numbered List</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {intent === "change-tone" && (
+                      <Select
+                        value={tone}
+                        onValueChange={(v) => setTone(v as Tone)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="professional">
+                            Professional
+                          </SelectItem>
+                          <SelectItem value="casual">Casual</SelectItem>
+                          <SelectItem value="formal">Formal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="prompt" className="space-y-4 pt-2">
+                    <Select
+                      value={intent}
+                      onValueChange={(v) => setIntent(v as Intent)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Intent" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value="code-expert"
+                          disabled={!userPlan?.canUsePro}
+                        >
+                          <div className="flex items-center">
+                            {!userPlan?.canUsePro && (
+                              <Lock className="h-3 w-3 mr-2" />
+                            )}
+                            Code Expert
+                          </div>
+                        </SelectItem>
+                        <SelectItem
+                          value="socratic-tutor"
+                          disabled={!userPlan?.canUsePro}
+                        >
+                          <div className="flex items-center">
+                            {!userPlan?.canUsePro && (
+                              <Lock className="h-3 w-3 mr-2" />
+                            )}
+                            Socratic Tutor
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TabsContent>
+                </Tabs>
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="w-full">
@@ -396,7 +438,9 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                   )}
                 </Tooltip>
                 {error && (
-                  <p className="text-sm text-destructive text-center">{error}</p>
+                  <p className="text-sm text-destructive text-center">
+                    {error}
+                  </p>
                 )}
               </div>
             </TooltipProvider>
