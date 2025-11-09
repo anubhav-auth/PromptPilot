@@ -1,21 +1,48 @@
-import React from "react";
+import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { showError } from "@/utils/toast";
-import { GoogleIcon } from "@/components/icons/GoogleIcon";
-import { Github } from "lucide-react";
-
-type OAuthProvider = "google" | "github";
+import { showLoading, dismissToast, showError, showSuccess } from "@/utils/toast";
 
 const AuthForm: React.FC = () => {
-  const handleOAuthLogin = async (provider: OAuthProvider) => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-    });
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (error) {
-      showError(`Error: ${error.message}`);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const loadingToast = showLoading(isLogin ? "Logging in..." : "Signing up...");
+
+    try {
+      let error = null;
+      
+      if (isLogin) {
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        error = loginError;
+      } else {
+        const { error: signupError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        error = signupError;
+      }
+
+      if (error) {
+        showError(error.message);
+      } else {
+        showSuccess(isLogin ? "Logged in successfully!" : "Check your email for the confirmation link!");
+      }
+    } catch (err) {
+      showError("An unexpected error occurred.");
+    } finally {
+      dismissToast(loadingToast);
+      setIsSubmitting(false);
     }
   };
 
@@ -23,26 +50,40 @@ const AuthForm: React.FC = () => {
     <Card className="w-full max-w-sm shadow-none border-none">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold text-primary">
-          Welcome
+          {isLogin ? "Welcome Back" : "Create Account"}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <Button
-            variant="outline"
-            className="w-full flex items-center justify-center"
-            onClick={() => handleOAuthLogin("google")}
-          >
-            <GoogleIcon className="mr-2 h-5 w-5" fill="currentColor" />
-            Sign in with Google
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isSubmitting}
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={isSubmitting}
+          />
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isLogin ? "Login" : "Sign Up"}
           </Button>
+        </form>
+        <div className="mt-4 text-center text-sm">
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
           <Button
-            variant="outline"
-            className="w-full flex items-center justify-center"
-            onClick={() => handleOAuthLogin("github")}
+            variant="link"
+            onClick={() => setIsLogin(!isLogin)}
+            className="p-0 h-auto"
+            disabled={isSubmitting}
           >
-            <Github className="mr-2 h-5 w-5" />
-            Sign in with GitHub
+            {isLogin ? "Sign Up" : "Login"}
           </Button>
         </div>
       </CardContent>
