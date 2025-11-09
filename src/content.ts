@@ -109,11 +109,31 @@ function openModal(target: HTMLElement) {
   modalIframe.style.overflow = "hidden";
 
   const rect = target.getBoundingClientRect();
-  const top = window.scrollY + rect.bottom + 8;
-  const left = window.scrollX + rect.right - 450;
+  const MODAL_HEIGHT = 300;
+  const MODAL_WIDTH = 450;
+  const SPACING = 8;
+
+  // Vertical positioning: Check if there's enough space below, otherwise place it above.
+  let top;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  if (spaceBelow < MODAL_HEIGHT + SPACING) {
+    // Not enough space below, position above
+    top = window.scrollY + rect.top - MODAL_HEIGHT - SPACING;
+  } else {
+    // Position below
+    top = window.scrollY + rect.bottom + SPACING;
+  }
+
+  // Horizontal positioning: Align to the right of the input, but don't go off-screen.
+  let left = window.scrollX + rect.right - MODAL_WIDTH;
+  left = Math.max(window.scrollX + SPACING, left); // Ensure it doesn't go off the left edge
+  left = Math.min(
+    left,
+    window.scrollX + window.innerWidth - MODAL_WIDTH - SPACING,
+  ); // Ensure it doesn't go off the right edge
 
   modalIframe.style.top = `${top}px`;
-  modalIframe.style.left = `${Math.max(8, left)}px`;
+  modalIframe.style.left = `${left}px`;
 
   document.body.appendChild(modalIframe);
   document.addEventListener("click", handleClickOutside, true);
