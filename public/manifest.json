@@ -11,6 +11,9 @@
       "128": "favicon.ico"
     }
   },
+  "background": {
+    "service_worker": "assets/background.js"
+  },
   "permissions": [
     "storage",
     "identity"

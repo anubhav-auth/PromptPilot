@@ -22,6 +22,7 @@ export default defineConfig({
         popup: path.resolve(__dirname, "popup.html"),
         modal: path.resolve(__dirname, "modal.html"),
         content: path.resolve(__dirname, "src/content.ts"),
+        background: path.resolve(__dirname, "src/background.ts"),
       },
       output: {
         entryFileNames: "assets/[name].js",

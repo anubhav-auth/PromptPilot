@@ -11,6 +11,14 @@ function showIcon(target: HTMLElement) {
     activeIcon.remove();
   }
 
+  chrome.runtime.sendMessage({
+    type: "logEvent",
+    data: {
+      event_type: "trigger_detected",
+      domain: window.location.hostname,
+    },
+  });
+
   const icon = document.createElement("div");
   icon.innerHTML = "⚡";
   icon.style.position = "absolute";
@@ -25,10 +33,10 @@ function showIcon(target: HTMLElement) {
   icon.style.alignItems = "center";
   icon.style.justifyContent = "center";
   icon.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-  
+
   const rect = target.getBoundingClientRect();
-  icon.style.top = `${window.scrollY + rect.top + (rect.height / 2) - 12}px`;
-  icon.style.left = `${window.scrollX + rect.right - 30}px`;
+  icon.style.top = `${window.scrollY + rect.top + rect.height / 2 - 12}px`;
+  icon.style.left = `${window.scrollX + rect.right - 40}px`;
 
   icon.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -48,7 +56,10 @@ function hideIcon() {
 }
 
 function getElementText(element: HTMLElement): string {
-  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+  if (
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLInputElement
+  ) {
     return element.value;
   } else if (element.isContentEditable) {
     return element.textContent || "";
@@ -57,13 +68,16 @@ function getElementText(element: HTMLElement): string {
 }
 
 function setElementText(element: HTMLElement, newText: string) {
-  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+  if (
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLInputElement
+  ) {
     element.value = newText;
   } else if (element.isContentEditable) {
     element.textContent = newText;
   }
   // Dispatch an input event to notify any listeners on the element
-  element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+  element.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
 }
 
 function openModal(target: HTMLElement) {
@@ -71,11 +85,19 @@ function openModal(target: HTMLElement) {
 
   const fullText = getElementText(target);
   const triggerIndex = fullText.lastIndexOf(TRIGGER_PHRASE);
-  const textToImprove = triggerIndex !== -1 ? fullText.substring(triggerIndex + TRIGGER_PHRASE.length) : "";
+  const textToImprove =
+    triggerIndex !== -1
+      ? fullText.substring(triggerIndex + TRIGGER_PHRASE.length)
+      : "";
+  const domain = window.location.hostname;
 
   modalIframe = document.createElement("iframe");
-  modalIframe.src = chrome.runtime.getURL(`modal.html?text=${encodeURIComponent(textToImprove.trim())}`);
-  
+  modalIframe.src = chrome.runtime.getURL(
+    `modal.html?text=${encodeURIComponent(
+      textToImprove.trim(),
+    )}&domain=${encodeURIComponent(domain)}`,
+  );
+
   modalIframe.style.position = "absolute";
   modalIframe.style.border = "none";
   modalIframe.style.zIndex = "9999";
@@ -89,12 +111,12 @@ function openModal(target: HTMLElement) {
   const rect = target.getBoundingClientRect();
   const top = window.scrollY + rect.bottom + 8;
   const left = window.scrollX + rect.right - 450;
-  
+
   modalIframe.style.top = `${top}px`;
   modalIframe.style.left = `${Math.max(8, left)}px`;
 
   document.body.appendChild(modalIframe);
-  document.addEventListener('click', handleClickOutside, true);
+  document.addEventListener("click", handleClickOutside, true);
 }
 
 function closeModal() {
@@ -103,8 +125,8 @@ function closeModal() {
     modalIframe = null;
   }
   hideIcon();
-  document.removeEventListener('click', handleClickOutside, true);
-  
+  document.removeEventListener("click", handleClickOutside, true);
+
   if (activeInput) {
     activeInput.focus();
     activeInput = null;
@@ -113,29 +135,39 @@ function closeModal() {
 
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as Node;
-  if (modalIframe && !modalIframe.contains(target) && activeIcon && !activeIcon.contains(target)) {
+  if (
+    modalIframe &&
+    !modalIframe.contains(target) &&
+    activeIcon &&
+    !activeIcon.contains(target)
+  ) {
     closeModal();
   }
 }
 
-window.addEventListener("message", (event) => {
-  if (event.source !== modalIframe?.contentWindow) {
-    return;
-  }
-  
-  if (event.data.type === "prompt-pilot-close-modal") {
-    closeModal();
-  } else if (event.data.type === "prompt-pilot-replace-text" && activeInput) {
-    const fullText = getElementText(activeInput);
-    const triggerIndex = fullText.lastIndexOf(TRIGGER_PHRASE);
-    const textBeforeTrigger = triggerIndex !== -1 ? fullText.substring(0, triggerIndex) : fullText;
-    
-    const newText = textBeforeTrigger + event.data.text;
-    setElementText(activeInput, newText);
-    
-    closeModal();
-  }
-}, false);
+window.addEventListener(
+  "message",
+  (event) => {
+    if (event.source !== modalIframe?.contentWindow) {
+      return;
+    }
+
+    if (event.data.type === "prompt-pilot-close-modal") {
+      closeModal();
+    } else if (event.data.type === "prompt-pilot-replace-text" && activeInput) {
+      const fullText = getElementText(activeInput);
+      const triggerIndex = fullText.lastIndexOf(TRIGGER_PHRASE);
+      const textBeforeTrigger =
+        triggerIndex !== -1 ? fullText.substring(0, triggerIndex) : fullText;
+
+      const newText = textBeforeTrigger + event.data.text;
+      setElementText(activeInput, newText);
+
+      closeModal();
+    }
+  },
+  false,
+);
 
 function handleInput(event: Event) {
   const target = event.target as HTMLElement;
@@ -157,8 +189,10 @@ function observeDocument() {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node instanceof HTMLElement) {
-          const inputs = node.querySelectorAll('textarea, input, [contenteditable="true"]');
-          inputs.forEach(el => attachListener(el as HTMLElement));
+          const inputs = node.querySelectorAll(
+            'textarea, input, [contenteditable="true"]',
+          );
+          inputs.forEach((el) => attachListener(el as HTMLElement));
           if (node.matches('textarea, input, [contenteditable="true"]')) {
             attachListener(node as HTMLElement);
           }
@@ -174,9 +208,11 @@ function observeDocument() {
 }
 
 function init() {
-  document.querySelectorAll('textarea, input, [contenteditable="true"]').forEach((el) => {
-    attachListener(el as HTMLElement);
-  });
+  document
+    .querySelectorAll('textarea, input, [contenteditable="true"]')
+    .forEach((el) => {
+      attachListener(el as HTMLElement);
+    });
   observeDocument();
 }
 
