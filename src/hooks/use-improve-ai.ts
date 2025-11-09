@@ -17,82 +17,154 @@ interface UseImproveAIProps {
 const buildSystemPrompt = (intent: Intent, structure: Structure): string => {
   let systemPrompt = `You are an AI assistant.`;
 
-  // Handle Intent
+  // Intent behavior
   switch (intent) {
-    case "general-improve":
-      systemPrompt += ` Your task is to refine the following text. Provide a standard polish for better clarity and readability.`;
+    // TEXT REFINEMENT (FREE)
+    case "general_polish":
+      systemPrompt += ` Improve clarity, flow, and readability without changing meaning.`;
       break;
-    case "fix-grammar-tone":
-      systemPrompt += ` Your task is to refine the following text. Correct spelling/grammar errors and ensure a professional tone without changing the core message.`;
+    case "fix_grammar":
+      systemPrompt += ` Fix spelling and grammar while preserving the original voice.`;
       break;
-    case "summarize-request":
-      systemPrompt += ` Your task is to condense the following text into its essential ask.`;
+    case "professional_tone":
+      systemPrompt += ` Rewrite in a formal, professional, business-appropriate tone.`;
       break;
-    case "expand-context":
-      systemPrompt += ` Your task is to take the following vague one-liner and add necessary background details.`;
+    case "casual_tone":
+      systemPrompt += ` Rewrite in a friendly, conversational tone.`;
       break;
-    case "simplify-language":
-      systemPrompt += ` Your task is to simplify the following text. Make it easier to understand for a general audience, using simpler words and shorter sentences.`;
+    case "academic_tone":
+      systemPrompt += ` Elevate vocabulary and structure for an academic/scholarly tone.`;
       break;
-    case "make-more-formal":
-      systemPrompt += ` Your task is to rewrite the following text in a more formal and professional tone. Avoid slang, contractions, and overly casual language.`;
+    case "urgent_tone":
+      systemPrompt += ` Make the message direct and urgent, removing filler and hedging.`;
       break;
-    case "chain-of-thought":
-      systemPrompt += ` You must explicitly write out your reasoning steps before giving a final answer. This is crucial for complex logic/math.`;
+    case "empathetic_tone":
+      systemPrompt += ` Adjust language to be empathetic and understanding.`;
       break;
-    case "persona-adoption":
-      systemPrompt += ` You will adopt a specific role based on the user's text. For example, if the user provides 'Act as a Senior React Developer', you will adopt that persona.`;
+    case "simplify":
+      systemPrompt += ` Explain as if to a 5-year-old; use simple words and short sentences.`;
       break;
-    case "socratic-tutor":
-      systemPrompt += ` Act as a Socratic tutor. Instead of giving the answer, ask insightful questions to help the user improve their writing themselves.`;
+    case "summarize":
+      systemPrompt += ` Condense to the essential points while preserving key meaning.`;
       break;
-    case "code-expert":
-      systemPrompt += ` Act as a code expert. Review and improve the following code snippet, providing explanations for your changes. Ensure the code is clean, commented, and efficient.`;
+    case "expand":
+      systemPrompt += ` Expand with necessary background and helpful context.`;
       break;
-    case "creative-writer":
-      systemPrompt += ` Act as a creative writer. Your style should be more evocative, descriptive, and less robotic.`;
+    case "dejargonize":
+      systemPrompt += ` Replace jargon and complex terms with plain, accessible language.`;
       break;
-    case "analogy-generator":
-      systemPrompt += ` Act as an expert in explaining complex topics. Your task is to generate a clear and insightful analogy for the user's text.`;
+
+    // PROMPT ENGINEERING (PRO)
+    case "cot":
+      systemPrompt += ` Think step by step and write out your reasoning before the final answer.`;
       break;
-    case "brainstorm-ideas":
-      systemPrompt += ` Act as a creative partner. Your task is to brainstorm a list of diverse and innovative ideas based on the user's topic or request.`;
+    case "tree_of_thoughts":
+      systemPrompt += ` Explore multiple solution paths, compare them, and select the best approach.`;
+      break;
+    case "socratic":
+      systemPrompt += ` Use Socratic questioning to guide rather than directly answer.`;
+      break;
+    case "feynman":
+      systemPrompt += ` Explain as if teaching someone else; ensure clarity and depth.`;
+      break;
+    case "devils_advocate":
+      systemPrompt += ` Challenge the assumptions and provide counterarguments.`;
+      break;
+    case "compression":
+      systemPrompt += ` Compress the prompt to minimal tokens while retaining essential meaning.`;
+      break;
+    case "few_shot":
+      systemPrompt += ` Provide a few generic examples to guide the expected format.`;
+      break;
+    case "persona":
+      systemPrompt += ` Adopt an expert persona appropriate to the user's topic.`;
+      break;
+    case "critic":
+      systemPrompt += ` Critique the input; identify weaknesses and suggest improvements.`;
+      break;
+
+    // DOMAIN SPECIFIC (PRO)
+    case "code_expert":
+      systemPrompt += ` Produce efficient, idiomatic code with standard naming and best practices.`;
+      break;
+    case "code_commenter":
+      systemPrompt += ` Add clear, helpful documentation comments explaining the code.`;
+      break;
+    case "bug_hunter":
+      systemPrompt += ` Find, explain, and fix bugs with concise rationale.`;
+      break;
+    case "unit_test":
+      systemPrompt += ` Generate comprehensive unit tests with edge cases.`;
+      break;
+    case "sec_auditor":
+      systemPrompt += ` Identify security vulnerabilities (e.g., XSS, SQLi) and propose fixes.`;
+      break;
+    case "copywriter":
+      systemPrompt += ` Write persuasive, conversion-focused copy that drives action.`;
+      break;
+    case "seo_optimizer":
+      systemPrompt += ` Optimize for SEO; weave given keywords naturally into the output.`;
+      break;
+    case "exec_summary":
+      systemPrompt += ` Provide a concise executive-level brief suitable for the C-suite.`;
+      break;
+    case "storyteller":
+      systemPrompt += ` Write vivid, non-repetitive narrative with strong imagery.`;
+      break;
+    case "world_builder":
+      systemPrompt += ` Create rich descriptive detail for settings and lore.`;
+      break;
+    case "screenplay":
+      systemPrompt += ` Format as a screenplay using industry conventions.`;
       break;
   }
 
-  // Handle Structure
+  // Output structure
   switch (structure) {
-    case "paragraph":
-      systemPrompt += ` Format the output as natural language prose.`;
+    // FREE
+    case "para":
+      systemPrompt += ` Output as natural language prose.`;
       break;
-    case "bullet-points":
-      systemPrompt += ` Format the output as a clear, itemized list of bullet points.`;
+    case "bullets":
+      systemPrompt += ` Output as concise bullet points.`;
       break;
-    case "step-by-step":
-      systemPrompt += ` Structure the output as a sequential set of step-by-step actions.`;
+    case "steps":
+      systemPrompt += ` Output as numbered steps in sequence.`;
       break;
-    case "numbered-list":
-      systemPrompt += ` Format the output as a numbered list, suitable for ordered sequences or instructions.`;
+    case "checklist":
+      systemPrompt += ` Output as a checklist using '- [ ] ' items.`;
       break;
-    case "json-format":
-      systemPrompt += ` The output must be strictly valid JSON.`;
+
+    // PRO
+    case "json":
+      systemPrompt += ` Output must be strictly valid JSON (no extra text).`;
       break;
-    case "markdown-table":
-      systemPrompt += ` Organize the data into a clean, copy-pasteable markdown table.`;
+    case "csv":
+      systemPrompt += ` Output must be valid CSV with a header row.`;
       break;
-    case "code-block-only":
-      systemPrompt += ` Return only the code snippet without any conversational filler text before or after.`;
+    case "markdown_table":
+      systemPrompt += ` Output as a clean Markdown table with headers.`;
       break;
-    case "mermaid-diagram":
-      systemPrompt += ` The output must be in Mermaid.js syntax, which can be rendered visually as flowcharts or sequence diagrams.`;
+    case "yaml":
+      systemPrompt += ` Output must be strictly valid YAML (no extra text).`;
       break;
-    case "csv-format":
-      systemPrompt += ` The output must be in valid CSV (Comma-Separated Values) format. Include a header row.`;
+    case "xml":
+      systemPrompt += ` Output must be valid XML with appropriate tags.`;
       break;
-    case "yaml-format":
-      systemPrompt += ` The output must be strictly valid YAML.`;
+    case "mermaid":
+      systemPrompt += ` Output must be Mermaid diagram syntax only.`;
+      break;
+    case "latex":
+      systemPrompt += ` Use LaTeX formatting for mathematical or structured content.`;
+      break;
+    case "code_only":
+      systemPrompt += ` Return only the code block with no additional commentary.`;
+      break;
+    case "tldr":
+      systemPrompt += ` Output only a single-sentence TL;DR summary.`;
       break;
   }
+
   return systemPrompt;
 };
 

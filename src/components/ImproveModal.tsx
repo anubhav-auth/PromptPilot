@@ -24,55 +24,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  TEXT_INTENTS,
+  TEXT_STRUCTURES,
+  PROMPT_INTENTS,
+  PROMPT_STRUCTURES,
+  PRO_FEATURES,
+  Intent,
+  Structure,
+  UserPlan,
+} from "@/components/improve-modal/constants";
 
 interface ImproveModalProps {
   onClose: () => void;
-}
-
-// Text Modes
-const TEXT_INTENTS = [
-  { value: "general-improve", label: "General Improve" },
-  { value: "fix-grammar-tone", label: "Fix Grammar & Tone" },
-  { value: "summarize-request", label: "Summarize Request" },
-  { value: "expand-context", label: "Expand Context" },
-] as const;
-const TEXT_STRUCTURES = [
-  { value: "paragraph", label: "Paragraph" },
-  { value: "bullet-points", label: "Bullet Points" },
-  { value: "step-by-step", label: "Step-by-Step" },
-] as const;
-
-// Prompt Modes
-const PROMPT_INTENTS = [
-  { value: "chain-of-thought", label: "Chain of Thought" },
-  { value: "persona-adoption", label: "Persona Adoption" },
-  { value: "socratic-tutor", label: "Socratic Tutor" },
-  { value: "code-expert", label: "Code Expert" },
-  { value: "creative-writer", label: "Creative Writer" },
-] as const;
-const PROMPT_STRUCTURES = [
-  { value: "json-format", label: "JSON Format" },
-  { value: "markdown-table", label: "Markdown Table" },
-  { value: "code-block-only", label: "Code Block Only" },
-  { value: "mermaid-diagram", label: "Mermaid Diagram" },
-] as const;
-
-type TextIntent = (typeof TEXT_INTENTS)[number]["value"];
-type TextStructure = (typeof TEXT_STRUCTURES)[number]["value"];
-type PromptIntent = (typeof PROMPT_INTENTS)[number]["value"];
-type PromptStructure = (typeof PROMPT_STRUCTURES)[number]["value"];
-
-type Intent = TextIntent | PromptIntent;
-type Structure = TextStructure | PromptStructure;
-
-const PRO_FEATURES: (Intent | Structure)[] = [
-  ...PROMPT_INTENTS.map((i) => i.value),
-  ...PROMPT_STRUCTURES.map((s) => s.value),
-];
-
-interface UserPlan {
-  tier: "free" | "pro";
-  canUsePro: boolean;
 }
 
 interface DailyUsage {
@@ -85,8 +49,8 @@ const DAILY_LIMIT = 10;
 const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   const [originalText, setOriginalText] = useState("");
   const [domain, setDomain] = useState("");
-  const [intent, setIntent] = useState<Intent>("general-improve");
-  const [structure, setStructure] = useState<Structure>("paragraph");
+  const [intent, setIntent] = useState<Intent>("general_polish");
+  const [structure, setStructure] = useState<Structure>("para");
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,11 +95,11 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === "text") {
-      setIntent("general-improve");
-      setStructure("paragraph");
+      setIntent("general_polish");
+      setStructure("para");
     } else {
-      setIntent("chain-of-thought");
-      setStructure("json-format");
+      setIntent("cot");
+      setStructure("json");
     }
   };
 
@@ -191,59 +155,151 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
 
     let systemPrompt = `You are an AI assistant.`;
 
-    // Handle Intent
+    // Intent behavior
     switch (intent) {
-      case "general-improve":
-        systemPrompt += ` Your task is to refine the following text. Provide a standard polish for better clarity and readability.`;
+      // TEXT REFINEMENT (FREE)
+      case "general_polish":
+        systemPrompt += ` Improve clarity, flow, and readability without changing meaning.`;
         break;
-      case "fix-grammar-tone":
-        systemPrompt += ` Your task is to refine the following text. Correct spelling/grammar errors and ensure a professional tone without changing the core message.`;
+      case "fix_grammar":
+        systemPrompt += ` Fix spelling and grammar while preserving the original voice.`;
         break;
-      case "summarize-request":
-        systemPrompt += ` Your task is to condense the following text into its essential ask.`;
+      case "professional_tone":
+        systemPrompt += ` Rewrite in a formal, professional, business-appropriate tone.`;
         break;
-      case "expand-context":
-        systemPrompt += ` Your task is to take the following vague one-liner and add necessary background details.`;
+      case "casual_tone":
+        systemPrompt += ` Rewrite in a friendly, conversational tone.`;
         break;
-      case "chain-of-thought":
-        systemPrompt += ` You must explicitly write out your reasoning steps before giving a final answer. This is crucial for complex logic/math.`;
+      case "academic_tone":
+        systemPrompt += ` Elevate vocabulary and structure for an academic/scholarly tone.`;
         break;
-      case "persona-adoption":
-        systemPrompt += ` You will adopt a specific role based on the user's text. For example, if the user provides 'Act as a Senior React Developer', you will adopt that persona.`;
+      case "urgent_tone":
+        systemPrompt += ` Make the message direct and urgent, removing filler and hedging.`;
         break;
-      case "socratic-tutor":
-        systemPrompt += ` Act as a Socratic tutor. Instead of giving the answer, ask insightful questions to help the user improve their writing themselves.`;
+      case "empathetic_tone":
+        systemPrompt += ` Adjust language to be empathetic and understanding.`;
         break;
-      case "code-expert":
-        systemPrompt += ` Act as a code expert. Review and improve the following code snippet, providing explanations for your changes. Ensure the code is clean, commented, and efficient.`;
+      case "simplify":
+        systemPrompt += ` Explain as if to a 5-year-old; use simple words and short sentences.`;
         break;
-      case "creative-writer":
-        systemPrompt += ` Act as a creative writer. Your style should be more evocative, descriptive, and less robotic.`;
+      case "summarize":
+        systemPrompt += ` Condense to the essential points while preserving key meaning.`;
+        break;
+      case "expand":
+        systemPrompt += ` Expand with necessary background and helpful context.`;
+        break;
+      case "dejargonize":
+        systemPrompt += ` Replace jargon and complex terms with plain, accessible language.`;
+        break;
+
+      // PROMPT ENGINEERING (PRO)
+      case "cot":
+        systemPrompt += ` Think step by step and write out your reasoning before the final answer.`;
+        break;
+      case "tree_of_thoughts":
+        systemPrompt += ` Explore multiple solution paths, compare them, and select the best approach.`;
+        break;
+      case "socratic":
+        systemPrompt += ` Use Socratic questioning to guide rather than directly answer.`;
+        break;
+      case "feynman":
+        systemPrompt += ` Explain as if teaching someone else; ensure clarity and depth.`;
+        break;
+      case "devils_advocate":
+        systemPrompt += ` Challenge the assumptions and provide counterarguments.`;
+        break;
+      case "compression":
+        systemPrompt += ` Compress the prompt to minimal tokens while retaining essential meaning.`;
+        break;
+      case "few_shot":
+        systemPrompt += ` Provide a few generic examples to guide the expected format.`;
+        break;
+      case "persona":
+        systemPrompt += ` Adopt an expert persona appropriate to the user's topic.`;
+        break;
+      case "critic":
+        systemPrompt += ` Critique the input; identify weaknesses and suggest improvements.`;
+        break;
+
+      // DOMAIN SPECIFIC (PRO)
+      case "code_expert":
+        systemPrompt += ` Produce efficient, idiomatic code with standard naming and best practices.`;
+        break;
+      case "code_commenter":
+        systemPrompt += ` Add clear, helpful documentation comments explaining the code.`;
+        break;
+      case "bug_hunter":
+        systemPrompt += ` Find, explain, and fix bugs with concise rationale.`;
+        break;
+      case "unit_test":
+        systemPrompt += ` Generate comprehensive unit tests with edge cases.`;
+        break;
+      case "sec_auditor":
+        systemPrompt += ` Identify security vulnerabilities (e.g., XSS, SQLi) and propose fixes.`;
+        break;
+      case "copywriter":
+        systemPrompt += ` Write persuasive, conversion-focused copy that drives action.`;
+        break;
+      case "seo_optimizer":
+        systemPrompt += ` Optimize for SEO; weave given keywords naturally into the output.`;
+        break;
+      case "exec_summary":
+        systemPrompt += ` Provide a concise executive-level brief suitable for the C-suite.`;
+        break;
+      case "storyteller":
+        systemPrompt += ` Write vivid, non-repetitive narrative with strong imagery.`;
+        break;
+      case "world_builder":
+        systemPrompt += ` Create rich descriptive detail for settings and lore.`;
+        break;
+      case "screenplay":
+        systemPrompt += ` Format as a screenplay using industry conventions.`;
         break;
     }
 
-    // Handle Structure
+    // Output structure
     switch (structure) {
-      case "paragraph":
-        systemPrompt += ` Format the output as natural language prose.`;
+      // FREE
+      case "para":
+        systemPrompt += ` Output as natural language prose.`;
         break;
-      case "bullet-points":
-        systemPrompt += ` Format the output as a clear, itemized list of bullet points.`;
+      case "bullets":
+        systemPrompt += ` Output as concise bullet points.`;
         break;
-      case "step-by-step":
-        systemPrompt += ` Structure the output as a sequential set of step-by-step actions.`;
+      case "steps":
+        systemPrompt += ` Output as numbered steps in sequence.`;
         break;
-      case "json-format":
-        systemPrompt += ` The output must be strictly valid JSON.`;
+      case "checklist":
+        systemPrompt += ` Output as a checklist using '- [ ] ' items.`;
         break;
-      case "markdown-table":
-        systemPrompt += ` Organize the data into a clean, copy-pasteable markdown table.`;
+
+      // PRO
+      case "json":
+        systemPrompt += ` Output must be strictly valid JSON (no extra text).`;
         break;
-      case "code-block-only":
-        systemPrompt += ` Return only the code snippet without any conversational filler text before or after.`;
+      case "csv":
+        systemPrompt += ` Output must be valid CSV with a header row.`;
         break;
-      case "mermaid-diagram":
-        systemPrompt += ` The output must be in Mermaid.js syntax, which can be rendered visually as flowcharts or sequence diagrams.`;
+      case "markdown_table":
+        systemPrompt += ` Output as a clean Markdown table with headers.`;
+        break;
+      case "yaml":
+        systemPrompt += ` Output must be strictly valid YAML (no extra text).`;
+        break;
+      case "xml":
+        systemPrompt += ` Output must be valid XML with appropriate tags.`;
+        break;
+      case "mermaid":
+        systemPrompt += ` Output must be Mermaid diagram syntax only.`;
+        break;
+      case "latex":
+        systemPrompt += ` Use LaTeX formatting for mathematical or structured content.`;
+        break;
+      case "code_only":
+        systemPrompt += ` Return only the code block with no additional commentary.`;
+        break;
+      case "tldr":
+        systemPrompt += ` Output only a single-sentence TL;DR summary.`;
         break;
     }
 
@@ -402,8 +458,8 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                   value={activeTab}
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="text">Text Modes</TabsTrigger>
-                    <TabsTrigger value="prompt">Prompt Modes</TabsTrigger>
+                    <TabsTrigger value="text">Refinement</TabsTrigger>
+                    <TabsTrigger value="prompt">Advanced (Pro)</TabsTrigger>
                   </TabsList>
                   <TabsContent value="text" className="space-y-4 pt-2">
                     <Select
@@ -413,7 +469,7 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Intent" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-64">
                         {TEXT_INTENTS.map((item) => (
                           <SelectItem key={item.value} value={item.value}>
                             {item.label}
@@ -428,7 +484,7 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Structure" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-64">
                         {TEXT_STRUCTURES.map((item) => (
                           <SelectItem key={item.value} value={item.value}>
                             {item.label}
@@ -445,7 +501,7 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Intent" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-64">
                         {PROMPT_INTENTS.map((item) => (
                           <SelectItem
                             key={item.value}
@@ -469,7 +525,7 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Structure" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-64">
                         {PROMPT_STRUCTURES.map((item) => (
                           <SelectItem
                             key={item.value}
@@ -501,7 +557,8 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       </Button>
                     </div>
                   </TooltipTrigger>
-                  {(isFeaturePro(intent) || isFeaturePro(structure)) &&
+                  {(PRO_FEATURES.includes(intent) ||
+                    PRO_FEATURES.includes(structure)) &&
                     !userPlan?.canUsePro && (
                       <TooltipContent>
                         <p>Upgrade to Pro to use this feature.</p>

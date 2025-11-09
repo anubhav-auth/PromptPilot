@@ -39,18 +39,18 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
   isImproving,
   apiError,
 }) => {
-  const [intent, setIntent] = useState<Intent>("general-improve");
-  const [structure, setStructure] = useState<Structure>("paragraph");
+  const [intent, setIntent] = useState<Intent>("general_polish");
+  const [structure, setStructure] = useState<Structure>("para");
   const [activeTab, setActiveTab] = useState("text");
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === "text") {
-      setIntent("general-improve");
-      setStructure("paragraph");
+      setIntent("general_polish");
+      setStructure("para");
     } else {
-      setIntent("chain-of-thought");
-      setStructure("json-format");
+      setIntent("cot");
+      setStructure("json");
     }
   };
 
@@ -72,8 +72,8 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
           value={activeTab}
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="text">Text Modes</TabsTrigger>
-            <TabsTrigger value="prompt">Prompt Modes</TabsTrigger>
+            <TabsTrigger value="text">Refinement</TabsTrigger>
+            <TabsTrigger value="prompt">Advanced (Pro)</TabsTrigger>
           </TabsList>
           <TabsContent value="text" className="space-y-4 pt-2">
             <Select
@@ -83,7 +83,7 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Intent" />
               </SelectTrigger>
-              <SelectContent className="max-h-48">
+              <SelectContent className="max-h-64">
                 {TEXT_INTENTS.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
                     {item.label}
@@ -98,7 +98,7 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Structure" />
               </SelectTrigger>
-              <SelectContent className="max-h-48">
+              <SelectContent className="max-h-64">
                 {TEXT_STRUCTURES.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
                     {item.label}
@@ -115,7 +115,7 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Intent" />
               </SelectTrigger>
-              <SelectContent className="max-h-48">
+              <SelectContent className="max-h-64">
                 {PROMPT_INTENTS.map((item) => (
                   <SelectItem
                     key={item.value}
@@ -139,7 +139,7 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Structure" />
               </SelectTrigger>
-              <SelectContent className="max-h-48">
+              <SelectContent className="max-h-64">
                 {PROMPT_STRUCTURES.map((item) => (
                   <SelectItem
                     key={item.value}
