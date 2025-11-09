@@ -83,7 +83,11 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Intent" />
               </SelectTrigger>
-              <SelectContent className="max-h-64" position="popper">
+              <SelectContent
+                className="max-h-64"
+                position="popper"
+                side="bottom"
+              >
                 {TEXT_INTENTS.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
                     {item.label}
@@ -98,7 +102,11 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Structure" />
               </SelectTrigger>
-              <SelectContent className="max-h-64" position="popper">
+              <SelectContent
+                className="max-h-64"
+                position="popper"
+                side="bottom"
+              >
                 {TEXT_STRUCTURES.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
                     {item.label}
@@ -115,7 +123,11 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Intent" />
               </SelectTrigger>
-              <SelectContent className="max-h-64" position="popper">
+              <SelectContent
+                className="max-h-64"
+                position="popper"
+                side="bottom"
+              >
                 {PROMPT_INTENTS.map((item) => (
                   <SelectItem
                     key={item.value}
@@ -139,7 +151,11 @@ const ImproveForm: React.FC<ImproveFormProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Structure" />
               </SelectTrigger>
-              <SelectContent className="max-h-64" position="popper">
+              <SelectContent
+                className="max-h-64"
+                position="popper"
+                side="bottom"
+              >
                 {PROMPT_STRUCTURES.map((item) => (
                   <SelectItem
                     key={item.value}

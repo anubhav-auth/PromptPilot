@@ -469,7 +469,11 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Intent" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-64">
+                      <SelectContent
+                        className="max-h-64"
+                        position="popper"
+                        side="bottom"
+                      >
                         {TEXT_INTENTS.map((item) => (
                           <SelectItem key={item.value} value={item.value}>
                             {item.label}
@@ -484,7 +488,11 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Structure" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-64">
+                      <SelectContent
+                        className="max-h-64"
+                        position="popper"
+                        side="bottom"
+                      >
                         {TEXT_STRUCTURES.map((item) => (
                           <SelectItem key={item.value} value={item.value}>
                             {item.label}
@@ -501,7 +509,11 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Intent" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-64">
+                      <SelectContent
+                        className="max-h-64"
+                        position="popper"
+                        side="bottom"
+                      >
                         {PROMPT_INTENTS.map((item) => (
                           <SelectItem
                             key={item.value}
@@ -525,7 +537,11 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       <SelectTrigger>
                         <SelectValue placeholder="Structure" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-64">
+                      <SelectContent
+                        className="max-h-64"
+                        position="popper"
+                        side="bottom"
+                      >
                         {PROMPT_STRUCTURES.map((item) => (
                           <SelectItem
                             key={item.value}
