@@ -1,11 +1,7 @@
-import React from "react";
-import { createRoot, Root } from "react-dom/client";
-import ImproveModal from "@/components/ImproveModal";
-import tailwindStyles from "@/globals.css?inline";
+/// <reference types="chrome" />
 
 let activeIcon: HTMLElement | null = null;
-let modalContainer: HTMLElement | null = null;
-let reactRoot: Root | null = null;
+let modalIframe: HTMLIFrameElement | null = null;
 
 const TRIGGER_PHRASE = "improve:";
 
@@ -50,32 +46,39 @@ function hideIcon() {
 }
 
 function openModal() {
-  if (modalContainer) return;
+  if (modalIframe) return;
 
-  modalContainer = document.createElement("div");
-  const shadowRoot = modalContainer.attachShadow({ mode: "open" });
+  modalIframe = document.createElement("iframe");
+  modalIframe.src = chrome.runtime.getURL("modal.html");
+  modalIframe.style.position = "fixed";
+  modalIframe.style.top = "0";
+  modalIframe.style.left = "0";
+  modalIframe.style.width = "100%";
+  modalIframe.style.height = "100%";
+  modalIframe.style.border = "none";
+  modalIframe.style.zIndex = "9999";
+  modalIframe.style.backgroundColor = "transparent";
   
-  const reactRootContainer = document.createElement("div");
-  shadowRoot.appendChild(reactRootContainer);
-
-  const styleEl = document.createElement("style");
-  styleEl.textContent = tailwindStyles;
-  shadowRoot.appendChild(styleEl);
-
-  document.body.appendChild(modalContainer);
-
-  reactRoot = createRoot(reactRootContainer);
-  reactRoot.render(React.createElement(ImproveModal, { onClose: closeModal }));
+  document.body.appendChild(modalIframe);
 }
 
 function closeModal() {
-  if (modalContainer && reactRoot) {
-    reactRoot.unmount();
-    modalContainer.remove();
-    modalContainer = null;
-    reactRoot = null;
+  if (modalIframe) {
+    modalIframe.remove();
+    modalIframe = null;
   }
 }
+
+// Listen for close messages from the iframe
+window.addEventListener("message", (event) => {
+  if (event.source !== modalIframe?.contentWindow) {
+    return;
+  }
+  if (event.data.type === "prompt-pilot-close-modal") {
+    closeModal();
+  }
+}, false);
+
 
 function handleInput(event: Event) {
   const target = event.target as HTMLElement;

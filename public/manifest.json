@@ -21,7 +21,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["assets/content.js"]
     }
   ],
   "content_security_policy": {
@@ -30,10 +30,11 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "popup.html"
+        "popup.html",
+        "modal.html"
       ],
       "matches": [
-        "https://*.supabase.co/*"
+        "<all_urls>"
       ]
     }
   ]

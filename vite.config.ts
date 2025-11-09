@@ -20,15 +20,13 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
         popup: path.resolve(__dirname, "popup.html"),
+        modal: path.resolve(__dirname, "modal.html"),
         content: path.resolve(__dirname, "src/content.ts"),
       },
       output: {
-        entryFileNames: "[name].js",
-        chunkFileNames: "assets/[name].js",
-        assetFileNames: "assets/[name].[ext]",
-        // Use IIFE format for all outputs to ensure content script compatibility
-        format: 'iife',
-        name: 'AppBundle', // Required for IIFE format
+        entryFileNames: "assets/[name].js",
+        chunkFileNames: "assets/chunk-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
       },
     },
   },
