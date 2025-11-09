@@ -26,9 +26,8 @@ export default defineConfig({
         entryFileNames: "[name].js",
         chunkFileNames: "assets/[name].js",
         assetFileNames: "assets/[name].[ext]",
-        // Crucial for content scripts: force IIFE format and inline dependencies
+        // Use IIFE format for all outputs to ensure content script compatibility
         format: 'iife',
-        inlineDynamicImports: true,
         name: 'AppBundle', // Required for IIFE format
       },
     },
