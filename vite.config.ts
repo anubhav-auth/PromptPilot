@@ -3,7 +3,7 @@ import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-export default defineConfig(() => ({
+export default defineConfig({
   base: "./", // Use relative paths for assets
   server: {
     host: "::",
@@ -26,7 +26,11 @@ export default defineConfig(() => ({
         entryFileNames: "[name].js",
         chunkFileNames: "assets/[name].js",
         assetFileNames: "assets/[name].[ext]",
+        // Crucial for content scripts: force IIFE format and inline dependencies
+        format: 'iife',
+        inlineDynamicImports: true,
+        name: 'AppBundle', // Required for IIFE format
       },
     },
   },
-}));
+});
