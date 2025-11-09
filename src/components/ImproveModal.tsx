@@ -29,22 +29,46 @@ interface ImproveModalProps {
   onClose: () => void;
 }
 
+// Text Modes
 const TEXT_INTENTS = [
-  "fix-grammar",
-  "expand",
-  "summarize",
-  "change-tone",
+  { value: "general-improve", label: "General Improve" },
+  { value: "fix-grammar-tone", label: "Fix Grammar & Tone" },
+  { value: "summarize-request", label: "Summarize Request" },
+  { value: "expand-context", label: "Expand Context" },
 ] as const;
-const PROMPT_INTENTS = ["code-expert", "socratic-tutor"] as const;
+const TEXT_STRUCTURES = [
+  { value: "paragraph", label: "Paragraph" },
+  { value: "bullet-points", label: "Bullet Points" },
+  { value: "step-by-step", label: "Step-by-Step" },
+] as const;
 
-type TextIntent = (typeof TEXT_INTENTS)[number];
-type PromptIntent = (typeof PROMPT_INTENTS)[number];
+// Prompt Modes
+const PROMPT_INTENTS = [
+  { value: "chain-of-thought", label: "Chain of Thought" },
+  { value: "persona-adoption", label: "Persona Adoption" },
+  { value: "socratic-tutor", label: "Socratic Tutor" },
+  { value: "code-expert", label: "Code Expert" },
+  { value: "creative-writer", label: "Creative Writer" },
+] as const;
+const PROMPT_STRUCTURES = [
+  { value: "json-format", label: "JSON Format" },
+  { value: "markdown-table", label: "Markdown Table" },
+  { value: "code-block-only", label: "Code Block Only" },
+  { value: "mermaid-diagram", label: "Mermaid Diagram" },
+] as const;
+
+type TextIntent = (typeof TEXT_INTENTS)[number]["value"];
+type TextStructure = (typeof TEXT_STRUCTURES)[number]["value"];
+type PromptIntent = (typeof PROMPT_INTENTS)[number]["value"];
+type PromptStructure = (typeof PROMPT_STRUCTURES)[number]["value"];
+
 type Intent = TextIntent | PromptIntent;
+type Structure = TextStructure | PromptStructure;
 
-const PRO_INTENTS_LIST: PromptIntent[] = ["code-expert", "socratic-tutor"];
-
-type Structure = "paragraph" | "bullet-points" | "list";
-type Tone = "professional" | "casual" | "formal";
+const PRO_FEATURES: (Intent | Structure)[] = [
+  ...PROMPT_INTENTS.map((i) => i.value),
+  ...PROMPT_STRUCTURES.map((s) => s.value),
+];
 
 interface UserPlan {
   tier: "free" | "pro";
@@ -61,14 +85,14 @@ const DAILY_LIMIT = 10;
 const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   const [originalText, setOriginalText] = useState("");
   const [domain, setDomain] = useState("");
-  const [intent, setIntent] = useState<Intent>("fix-grammar");
+  const [intent, setIntent] = useState<Intent>("general-improve");
   const [structure, setStructure] = useState<Structure>("paragraph");
-  const [tone, setTone] = useState<Tone>("professional");
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultText, setResultText] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+  const [activeTab, setActiveTab] = useState("text");
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -103,6 +127,17 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
       }
     });
   }, []);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === "text") {
+      setIntent("general-improve");
+      setStructure("paragraph");
+    } else {
+      setIntent("chain-of-thought");
+      setStructure("json-format");
+    }
+  };
 
   const handleImprove = async () => {
     if (!apiKey) {
@@ -147,7 +182,6 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
         domain,
         intent,
         structure,
-        tone: intent === "change-tone" ? tone : null,
       },
     });
 
@@ -155,23 +189,63 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
     setError(null);
     setResultText(null);
 
-    let systemPrompt = `You are an AI assistant. Your task is to refine the following text.`;
-    if (intent === "fix-grammar")
-      systemPrompt += ` Focus on fixing grammar and spelling mistakes.`;
-    if (intent === "expand") systemPrompt += ` Expand on the ideas presented.`;
-    if (intent === "summarize") systemPrompt += ` Summarize the text concisely.`;
-    if (intent === "change-tone")
-      systemPrompt += ` Change the tone to be more ${tone}.`;
-    if (intent === "code-expert")
-      systemPrompt += ` Act as a code expert. Review and improve the following code snippet, providing explanations for your changes.`;
-    if (intent === "socratic-tutor")
-      systemPrompt += ` Act as a Socratic tutor. Instead of giving the answer, ask insightful questions to help the user improve their writing themselves.`;
-    if (structure === "bullet-points")
-      systemPrompt += ` Format the output as bullet points.`;
-    if (structure === "list")
-      systemPrompt += ` Format the output as a numbered list.`;
-    if (structure === "paragraph")
-      systemPrompt += ` Format the output as a single paragraph.`;
+    let systemPrompt = `You are an AI assistant.`;
+
+    // Handle Intent
+    switch (intent) {
+      case "general-improve":
+        systemPrompt += ` Your task is to refine the following text. Provide a standard polish for better clarity and readability.`;
+        break;
+      case "fix-grammar-tone":
+        systemPrompt += ` Your task is to refine the following text. Correct spelling/grammar errors and ensure a professional tone without changing the core message.`;
+        break;
+      case "summarize-request":
+        systemPrompt += ` Your task is to condense the following text into its essential ask.`;
+        break;
+      case "expand-context":
+        systemPrompt += ` Your task is to take the following vague one-liner and add necessary background details.`;
+        break;
+      case "chain-of-thought":
+        systemPrompt += ` You must explicitly write out your reasoning steps before giving a final answer. This is crucial for complex logic/math.`;
+        break;
+      case "persona-adoption":
+        systemPrompt += ` You will adopt a specific role based on the user's text. For example, if the user provides 'Act as a Senior React Developer', you will adopt that persona.`;
+        break;
+      case "socratic-tutor":
+        systemPrompt += ` Act as a Socratic tutor. Instead of giving the answer, ask insightful questions to help the user improve their writing themselves.`;
+        break;
+      case "code-expert":
+        systemPrompt += ` Act as a code expert. Review and improve the following code snippet, providing explanations for your changes. Ensure the code is clean, commented, and efficient.`;
+        break;
+      case "creative-writer":
+        systemPrompt += ` Act as a creative writer. Your style should be more evocative, descriptive, and less robotic.`;
+        break;
+    }
+
+    // Handle Structure
+    switch (structure) {
+      case "paragraph":
+        systemPrompt += ` Format the output as natural language prose.`;
+        break;
+      case "bullet-points":
+        systemPrompt += ` Format the output as a clear, itemized list of bullet points.`;
+        break;
+      case "step-by-step":
+        systemPrompt += ` Structure the output as a sequential set of step-by-step actions.`;
+        break;
+      case "json-format":
+        systemPrompt += ` The output must be strictly valid JSON.`;
+        break;
+      case "markdown-table":
+        systemPrompt += ` Organize the data into a clean, copy-pasteable markdown table.`;
+        break;
+      case "code-block-only":
+        systemPrompt += ` Return only the code snippet without any conversational filler text before or after.`;
+        break;
+      case "mermaid-diagram":
+        systemPrompt += ` The output must be in Mermaid.js syntax, which can be rendered visually as flowcharts or sequence diagrams.`;
+        break;
+    }
 
     try {
       const response = await fetch(
@@ -261,9 +335,14 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
     }
   };
 
-  const isProIntentSelected = PRO_INTENTS_LIST.includes(intent as PromptIntent);
+  const isFeaturePro = (feature: Intent | Structure) =>
+    PRO_FEATURES.includes(feature);
+
   const improveButtonDisabled =
-    !!error || isLoading || (isProIntentSelected && !userPlan?.canUsePro);
+    !!error ||
+    isLoading ||
+    (isFeaturePro(intent) && !userPlan?.canUsePro) ||
+    (isFeaturePro(structure) && !userPlan?.canUsePro);
 
   return (
     <Card className="w-full h-full relative border-none bg-background rounded-lg flex flex-col overflow-hidden">
@@ -319,69 +398,44 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
               <div className="space-y-4">
                 <Tabs
                   defaultValue="text"
-                  onValueChange={(value) =>
-                    setIntent(
-                      value === "text" ? "fix-grammar" : "code-expert",
-                    )
-                  }
+                  onValueChange={handleTabChange}
+                  value={activeTab}
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="text">Text Improvement</TabsTrigger>
-                    <TabsTrigger value="prompt">Prompt Improvement</TabsTrigger>
+                    <TabsTrigger value="text">Text Modes</TabsTrigger>
+                    <TabsTrigger value="prompt">Prompt Modes</TabsTrigger>
                   </TabsList>
                   <TabsContent value="text" className="space-y-4 pt-2">
-                    <div className="grid grid-cols-2 gap-4">
-                      <Select
-                        value={intent}
-                        onValueChange={(v) => setIntent(v as Intent)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Intent" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fix-grammar">
-                            Fix Grammar
+                    <Select
+                      value={intent}
+                      onValueChange={(v) => setIntent(v as Intent)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Intent" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEXT_INTENTS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
                           </SelectItem>
-                          <SelectItem value="expand">Expand</SelectItem>
-                          <SelectItem value="summarize">Summarize</SelectItem>
-                          <SelectItem value="change-tone">
-                            Change Tone
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={structure}
+                      onValueChange={(v) => setStructure(v as Structure)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Structure" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEXT_STRUCTURES.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
                           </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={structure}
-                        onValueChange={(v) => setStructure(v as Structure)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Structure" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="paragraph">Paragraph</SelectItem>
-                          <SelectItem value="bullet-points">
-                            Bullet Points
-                          </SelectItem>
-                          <SelectItem value="list">Numbered List</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {intent === "change-tone" && (
-                      <Select
-                        value={tone}
-                        onValueChange={(v) => setTone(v as Tone)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Tone" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="professional">
-                            Professional
-                          </SelectItem>
-                          <SelectItem value="casual">Casual</SelectItem>
-                          <SelectItem value="formal">Formal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TabsContent>
                   <TabsContent value="prompt" className="space-y-4 pt-2">
                     <Select
@@ -392,28 +446,44 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                         <SelectValue placeholder="Intent" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem
-                          value="code-expert"
-                          disabled={!userPlan?.canUsePro}
-                        >
-                          <div className="flex items-center">
-                            {!userPlan?.canUsePro && (
-                              <Lock className="h-3 w-3 mr-2" />
-                            )}
-                            Code Expert
-                          </div>
-                        </SelectItem>
-                        <SelectItem
-                          value="socratic-tutor"
-                          disabled={!userPlan?.canUsePro}
-                        >
-                          <div className="flex items-center">
-                            {!userPlan?.canUsePro && (
-                              <Lock className="h-3 w-3 mr-2" />
-                            )}
-                            Socratic Tutor
-                          </div>
-                        </SelectItem>
+                        {PROMPT_INTENTS.map((item) => (
+                          <SelectItem
+                            key={item.value}
+                            value={item.value}
+                            disabled={!userPlan?.canUsePro}
+                          >
+                            <div className="flex items-center">
+                              {!userPlan?.canUsePro && (
+                                <Lock className="h-3 w-3 mr-2" />
+                              )}
+                              {item.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={structure}
+                      onValueChange={(v) => setStructure(v as Structure)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Structure" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROMPT_STRUCTURES.map((item) => (
+                          <SelectItem
+                            key={item.value}
+                            value={item.value}
+                            disabled={!userPlan?.canUsePro}
+                          >
+                            <div className="flex items-center">
+                              {!userPlan?.canUsePro && (
+                                <Lock className="h-3 w-3 mr-2" />
+                              )}
+                              {item.label}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </TabsContent>
@@ -431,11 +501,12 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                       </Button>
                     </div>
                   </TooltipTrigger>
-                  {isProIntentSelected && !userPlan?.canUsePro && (
-                    <TooltipContent>
-                      <p>Upgrade to Pro to use advanced intents.</p>
-                    </TooltipContent>
-                  )}
+                  {(isFeaturePro(intent) || isFeaturePro(structure)) &&
+                    !userPlan?.canUsePro && (
+                      <TooltipContent>
+                        <p>Upgrade to Pro to use this feature.</p>
+                      </TooltipContent>
+                    )}
                 </Tooltip>
                 {error && (
                   <p className="text-sm text-destructive text-center">
