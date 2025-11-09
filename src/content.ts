@@ -98,22 +98,38 @@ function openModal(target: HTMLElement) {
     )}&domain=${encodeURIComponent(domain)}`,
   );
 
+  const modalWidth = 450;
+  const modalHeight = 450;
+
   modalIframe.style.position = "absolute";
   modalIframe.style.border = "none";
   modalIframe.style.zIndex = "9999";
   modalIframe.style.backgroundColor = "transparent";
-  modalIframe.style.width = "450px";
-  modalIframe.style.height = "450px";
+  modalIframe.style.width = `${modalWidth}px`;
+  modalIframe.style.height = `${modalHeight}px`;
   modalIframe.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
   modalIframe.style.borderRadius = "8px";
   modalIframe.style.overflow = "hidden";
 
   const rect = target.getBoundingClientRect();
-  const top = window.scrollY + rect.bottom + 8;
-  const left = window.scrollX + rect.right - 450;
 
-  modalIframe.style.top = `${top}px`;
-  modalIframe.style.left = `${Math.max(8, left)}px`;
+  // Calculate vertical position
+  const spaceBelow = window.innerHeight - rect.bottom;
+  let topPosition;
+
+  if (spaceBelow > modalHeight + 8) {
+    // Position below the input if there's enough space
+    topPosition = window.scrollY + rect.bottom + 8;
+  } else {
+    // Otherwise, position above the input
+    topPosition = window.scrollY + rect.top - modalHeight - 8;
+  }
+
+  // Calculate horizontal position
+  const leftPosition = window.scrollX + rect.right - modalWidth;
+
+  modalIframe.style.top = `${topPosition}px`;
+  modalIframe.style.left = `${Math.max(8, leftPosition)}px`;
 
   document.body.appendChild(modalIframe);
   document.addEventListener("click", handleClickOutside, true);
