@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig(() => ({
+  base: "./", // Use relative paths for assets
   server: {
     host: "::",
     port: 8080,
@@ -18,7 +19,7 @@ export default defineConfig(() => ({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
-        popup: path.resolve(__dirname, "public/popup.html"),
+        popup: path.resolve(__dirname, "popup.html"), // Updated path
       },
     },
   },
