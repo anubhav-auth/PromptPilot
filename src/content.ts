@@ -2,6 +2,7 @@
 
 let activeIcon: HTMLElement | null = null;
 let modalIframe: HTMLIFrameElement | null = null;
+let activeInput: HTMLElement | null = null; // New variable to store the active input element
 
 const TRIGGER_PHRASE = "improve:";
 
@@ -31,6 +32,7 @@ function showIcon(target: HTMLElement) {
 
   icon.addEventListener("click", (e) => {
     e.stopPropagation();
+    activeInput = target; // Store the target input element
     openModal(target);
   });
 
@@ -84,6 +86,12 @@ function closeModal() {
   }
   hideIcon();
   document.removeEventListener('click', handleClickOutside, true);
+  
+  // Restore focus to the active input element
+  if (activeInput) {
+    activeInput.focus();
+    activeInput = null;
+  }
 }
 
 function handleClickOutside(event: MouseEvent) {
