@@ -9,9 +9,16 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { showLoading, dismissToast, showError } from "@/utils/toast";
 
+interface Profile {
+  tier: string;
+  trial_ends_at: string | null;
+  subscription_status: string | null;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
+  profile: Profile | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
 }
@@ -23,27 +30,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("tier, trial_ends_at, subscription_status")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching profile:", error.message);
+      return null;
+    }
+    return data;
+  };
+
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        setSession(session);
-        setUser(session?.user ?? null);
-      } else if (event === "SIGNED_OUT") {
-        setSession(null);
-        setUser(null);
+    const setupSession = async (session: Session | null) => {
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+
+      if (currentUser) {
+        const userProfile = await fetchProfile(currentUser.id);
+        setProfile(userProfile);
+        chrome.storage.local.set({ user_profile: userProfile });
+      } else {
+        setProfile(null);
+        chrome.storage.local.remove("user_profile");
       }
       setIsLoading(false);
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setupSession(session);
     });
 
-    // Fetch initial session manually in case onAuthStateChange misses it (common in extensions)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
+      setupSession(session);
     });
 
     return () => subscription.unsubscribe();
@@ -55,6 +83,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const { error } = await supabase.auth.signOut();
       if (error) {
         showError(error.message);
+      } else {
+        // Also clear daily usage on sign out
+        chrome.storage.local.remove(["user_profile", "daily_usage"]);
       }
     } catch (error) {
       showError("An unexpected error occurred during logout.");
@@ -64,7 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isLoading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, isLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

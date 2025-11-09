@@ -3,16 +3,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Copy as CopyIcon, X } from "lucide-react";
+import { Loader2, Copy as CopyIcon, X, Lock } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ImproveModalProps {
   onClose: () => void;
 }
 
-type Intent = "fix-grammar" | "expand" | "summarize" | "change-tone";
+type Intent = "fix-grammar" | "expand" | "summarize" | "change-tone" | "code-expert" | "socratic-tutor";
+const PRO_INTENTS: Intent[] = ["code-expert", "socratic-tutor"];
+
 type Structure = "paragraph" | "bullet-points" | "list";
 type Tone = "professional" | "casual" | "formal";
+
+interface UserPlan {
+  tier: 'free' | 'pro';
+  canUsePro: boolean;
+}
+
+interface DailyUsage {
+  count: number;
+  lastReset: number;
+}
+
+const DAILY_LIMIT = 10;
 
 const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   const [originalText, setOriginalText] = useState("");
@@ -23,21 +38,30 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultText, setResultText] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
 
   useEffect(() => {
-    // Get original text from URL
     const urlParams = new URLSearchParams(window.location.search);
     const text = urlParams.get("text");
     if (text) {
       setOriginalText(decodeURIComponent(text));
     }
 
-    // Get API key from storage
-    chrome.storage.local.get("openai_api_key", (result) => {
+    chrome.storage.local.get(["openai_api_key", "user_profile"], (result) => {
       if (result.openai_api_key) {
         setApiKey(result.openai_api_key);
       } else {
         setError("OpenAI API key not found. Please add it in the extension settings.");
+      }
+
+      const profile = result.user_profile;
+      if (profile) {
+        const trialEnds = profile.trial_ends_at ? new Date(profile.trial_ends_at) : new Date(0);
+        const isTrialActive = trialEnds > new Date();
+        const canUsePro = profile.tier === 'pro' || isTrialActive;
+        setUserPlan({ tier: profile.tier, canUsePro });
+      } else {
+        setUserPlan({ tier: 'free', canUsePro: false });
       }
     });
   }, []);
@@ -52,6 +76,29 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
       return;
     }
 
+    if (userPlan?.tier === 'free') {
+      const usageData: DailyUsage = await new Promise((resolve) => {
+        chrome.storage.local.get("daily_usage", (res) => {
+          resolve(res.daily_usage || { count: 0, lastReset: Date.now() });
+        });
+      });
+
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000;
+
+      if (now - usageData.lastReset > oneDay) {
+        usageData.count = 0;
+        usageData.lastReset = now;
+      }
+
+      if (usageData.count >= DAILY_LIMIT) {
+        const message = "Daily limit of 10 improvements reached. Upgrade to Pro for unlimited usage.";
+        setError(message);
+        showError(message);
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError(null);
     setResultText(null);
@@ -61,6 +108,8 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
     if (intent === 'expand') systemPrompt += ` Expand on the ideas presented.`;
     if (intent === 'summarize') systemPrompt += ` Summarize the text concisely.`;
     if (intent === 'change-tone') systemPrompt += ` Change the tone to be more ${tone}.`;
+    if (intent === 'code-expert') systemPrompt += ` Act as a code expert. Review and improve the following code snippet, providing explanations for your changes.`;
+    if (intent === 'socratic-tutor') systemPrompt += ` Act as a Socratic tutor. Instead of giving the answer, ask insightful questions to help the user improve their writing themselves.`;
     if (structure === 'bullet-points') systemPrompt += ` Format the output as bullet points.`;
     if (structure === 'list') systemPrompt += ` Format the output as a numbered list.`;
     if (structure === 'paragraph') systemPrompt += ` Format the output as a single paragraph.`;
@@ -90,6 +139,20 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
       const result = data.choices[0]?.message?.content;
       if (result) {
         setResultText(result);
+        if (userPlan?.tier === 'free') {
+          chrome.storage.local.get("daily_usage", (res) => {
+            const usageData: DailyUsage = res.daily_usage || { count: 0, lastReset: Date.now() };
+            const now = Date.now();
+            const oneDay = 24 * 60 * 60 * 1000;
+            if (now - usageData.lastReset > oneDay) {
+              usageData.count = 1;
+              usageData.lastReset = now;
+            } else {
+              usageData.count += 1;
+            }
+            chrome.storage.local.set({ daily_usage: usageData });
+          });
+        }
       } else {
         throw new Error("Received an empty response from OpenAI.");
       }
@@ -138,40 +201,68 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
       );
     }
 
+    const isProIntentSelected = PRO_INTENTS.includes(intent);
+    const improveButtonDisabled = !!error || isLoading || (isProIntentSelected && !userPlan?.canUsePro);
+
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Select value={intent} onValueChange={(v) => setIntent(v as Intent)}>
-            <SelectTrigger><SelectValue placeholder="Intent" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="fix-grammar">Fix Grammar</SelectItem>
-              <SelectItem value="expand">Expand</SelectItem>
-              <SelectItem value="summarize">Summarize</SelectItem>
-              <SelectItem value="change-tone">Change Tone</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={structure} onValueChange={(v) => setStructure(v as Structure)}>
-            <SelectTrigger><SelectValue placeholder="Structure" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="paragraph">Paragraph</SelectItem>
-              <SelectItem value="bullet-points">Bullet Points</SelectItem>
-              <SelectItem value="list">Numbered List</SelectItem>
-            </SelectContent>
-          </Select>
+      <TooltipProvider>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Select value={intent} onValueChange={(v) => setIntent(v as Intent)}>
+              <SelectTrigger><SelectValue placeholder="Intent" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fix-grammar">Fix Grammar</SelectItem>
+                <SelectItem value="expand">Expand</SelectItem>
+                <SelectItem value="summarize">Summarize</SelectItem>
+                <SelectItem value="change-tone">Change Tone</SelectItem>
+                <SelectItem value="code-expert" disabled={!userPlan?.canUsePro}>
+                  <div className="flex items-center">
+                    {!userPlan?.canUsePro && <Lock className="h-3 w-3 mr-2" />}
+                    Code Expert
+                  </div>
+                </SelectItem>
+                <SelectItem value="socratic-tutor" disabled={!userPlan?.canUsePro}>
+                  <div className="flex items-center">
+                    {!userPlan?.canUsePro && <Lock className="h-3 w-3 mr-2" />}
+                    Socratic Tutor
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={structure} onValueChange={(v) => setStructure(v as Structure)}>
+              <SelectTrigger><SelectValue placeholder="Structure" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="paragraph">Paragraph</SelectItem>
+                <SelectItem value="bullet-points">Bullet Points</SelectItem>
+                <SelectItem value="list">Numbered List</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {intent === 'change-tone' && (
+            <Select value={tone} onValueChange={(v) => setTone(v as Tone)}>
+              <SelectTrigger><SelectValue placeholder="Tone" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="casual">Casual</SelectItem>
+                <SelectItem value="formal">Formal</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <Button onClick={handleImprove} className="w-full" disabled={improveButtonDisabled}>Improve</Button>
+              </div>
+            </TooltipTrigger>
+            {isProIntentSelected && !userPlan?.canUsePro && (
+              <TooltipContent>
+                <p>Upgrade to Pro to use advanced intents.</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+          {error && <p className="text-sm text-destructive text-center">{error}</p>}
         </div>
-        {intent === 'change-tone' && (
-          <Select value={tone} onValueChange={(v) => setTone(v as Tone)}>
-            <SelectTrigger><SelectValue placeholder="Tone" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="professional">Professional</SelectItem>
-              <SelectItem value="casual">Casual</SelectItem>
-              <SelectItem value="formal">Formal</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-        <Button onClick={handleImprove} className="w-full" disabled={!!error}>Improve</Button>
-        {error && <p className="text-sm text-destructive text-center">{error}</p>}
-      </div>
+      </TooltipProvider>
     );
   };
 
