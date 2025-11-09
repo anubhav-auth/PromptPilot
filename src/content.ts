@@ -103,7 +103,7 @@ function openModal(target: HTMLElement) {
   modalIframe.style.zIndex = "9999";
   modalIframe.style.backgroundColor = "transparent";
   modalIframe.style.width = "450px";
-  modalIframe.style.height = "300px";
+  modalIframe.style.height = "450px";
   modalIframe.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
   modalIframe.style.borderRadius = "8px";
   modalIframe.style.overflow = "hidden";
