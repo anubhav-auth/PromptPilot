@@ -18,7 +18,23 @@
   "host_permissions": [
     "https://*/*"
   ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://grcsxpvyyxmrzpplwwur.supabase.co;"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "popup.html"
+      ],
+      "matches": [
+        "https://*.supabase.co/*"
+      ]
+    }
+  ]
 }
