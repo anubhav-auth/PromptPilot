@@ -7,9 +7,6 @@ interface UseImproveAIProps {
   domain: string;
 }
 
-// Helper to clean up the output
-const cleanOutput = (text: string) => text.replace(/^"""|"""$/g, "").trim();
-
 const buildSystemPrompt = (intent: string, structure: Structure, customInstruction?: string): string => {
   const BASE_SYSTEM = `You are PromptPilot, an expert AI text transformation engine.
 Your goal is to strictly process the User Input according to the defined ACTION and FORMAT constraints.
@@ -19,12 +16,10 @@ Return ONLY the final transformed output.`;
   let actionInstruction = "";
   let constraints = "";
 
-  // 1. Check for Custom Instruction first
   if (customInstruction) {
     actionInstruction = `ACTION: ${customInstruction}`;
     constraints = "Follow the user's custom instruction precisely.";
   } else {
-    // 2. Fallback to Standard Intents
     switch (intent) {
       case "general_polish":
         actionInstruction = "ACTION: Refine the User Input for better clarity, flow, and readability.";
@@ -170,9 +165,9 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
 
   const improveText = async (
     originalText: string,
-    intent: string, // Changed from Intent to string to support customs
+    intent: string,
     structure: Structure,
-    customInstruction?: string // New parameter
+    customInstruction?: string
   ) => {
     if (!apiKey) {
       setError("OpenAI API key not found. Please add it in the extension settings.");
@@ -183,7 +178,15 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
       return;
     }
 
-    // Local usage tracking
+    // 1. Retrieve the Model Preference
+    const { openai_model } = await new Promise<{ openai_model?: string }>((resolve) => {
+      chrome.storage.local.get("openai_model", (res) => resolve(res));
+    });
+
+    // Default to gpt-4o-mini if not set
+    const selectedModel = openai_model || "gpt-4o-mini";
+
+    // 2. Track usage
     chrome.storage.local.get("daily_usage", (res) => {
       const usageData = res.daily_usage || { count: 0, lastReset: Date.now() };
       const now = Date.now();
@@ -197,7 +200,7 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
 
     chrome.runtime.sendMessage({
       type: "logEvent",
-      data: { event_type: "improve_clicked", domain, intent, structure },
+      data: { event_type: "improve_clicked", domain, intent, structure, model: selectedModel },
     });
 
     setIsLoading(true);
@@ -215,7 +218,7 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: selectedModel, // Use the selected model
           stream: true,
           messages: [
             { role: "system", content: systemPrompt },
@@ -265,7 +268,7 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
                   }
                 }
               } catch (e) {
-                // ignore parse errors for partial chunks
+                // Ignore parse errors on partial chunks
               }
             }
           }
