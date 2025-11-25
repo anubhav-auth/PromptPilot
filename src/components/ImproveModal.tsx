@@ -13,6 +13,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +26,6 @@ import {
   TEXT_STRUCTURES,
   PROMPT_INTENTS,
   PROMPT_STRUCTURES,
-  Intent,
   Structure,
 } from "@/components/improve-modal/constants";
 import { useImproveAI } from "@/hooks/use-improve-ai";
@@ -32,15 +34,22 @@ interface ImproveModalProps {
   onClose: () => void;
 }
 
+interface CustomIntent {
+  id: string;
+  label: string;
+  instruction: string;
+}
+
 const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   const [originalText, setOriginalText] = useState("");
   const [domain, setDomain] = useState("");
-  const [intent, setIntent] = useState<Intent>("general_polish");
+  const [intent, setIntent] = useState<string>("general_polish");
   const [structure, setStructure] = useState<Structure>("para");
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("text");
+  
+  const [customIntents, setCustomIntents] = useState<CustomIntent[]>([]);
 
-  // Load params from URL (iframe) and API Key
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const text = urlParams.get("text");
@@ -48,11 +57,14 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
     if (text) setOriginalText(decodeURIComponent(text));
     if (domainParam) setDomain(decodeURIComponent(domainParam));
 
-    chrome.storage.local.get("openai_api_key", (result) => {
+    chrome.storage.local.get(["openai_api_key", "custom_intents"], (result) => {
       if (result.openai_api_key) {
         setApiKey(result.openai_api_key);
       } else {
         showError("API key not found. Please set it in the extension popup.");
+      }
+      if (result.custom_intents) {
+        setCustomIntents(result.custom_intents);
       }
     });
   }, []);
@@ -74,7 +86,11 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   };
 
   const handleImprove = () => {
-    improveText(originalText, intent, structure);
+    // Check if the selected intent is a custom one
+    const customMatch = customIntents.find(i => i.id === intent);
+    const customInstruction = customMatch ? customMatch.instruction : undefined;
+    
+    improveText(originalText, intent, structure, customInstruction);
   };
 
   const handleReplace = () => {
@@ -161,26 +177,39 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                   <TabsTrigger value="text">Refinement</TabsTrigger>
                   <TabsTrigger value="prompt">Prompt Engineering</TabsTrigger>
                 </TabsList>
+                
+                {/* Content for BOTH tabs (since logic is similar, just different default options) */}
                 <TabsContent value="text" className="space-y-4 pt-2">
-                  <Select
-                    value={intent}
-                    onValueChange={(v) => setIntent(v as Intent)}
-                  >
+                  <Select value={intent} onValueChange={setIntent}>
                     <SelectTrigger>
                       <SelectValue placeholder="Intent" />
                     </SelectTrigger>
                     <SelectContent className="max-h-64" position="popper" side="bottom">
-                      {TEXT_INTENTS.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Standard</SelectLabel>
+                        {TEXT_INTENTS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      {customIntents.length > 0 && (
+                        <>
+                          <SelectSeparator />
+                          <SelectGroup>
+                            <SelectLabel>Custom</SelectLabel>
+                            {customIntents.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
-                  <Select
-                    value={structure}
-                    onValueChange={(v) => setStructure(v as Structure)}
-                  >
+                  
+                  <Select value={structure} onValueChange={(v) => setStructure(v as Structure)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Structure" />
                     </SelectTrigger>
@@ -193,26 +222,38 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
                     </SelectContent>
                   </Select>
                 </TabsContent>
+
                 <TabsContent value="prompt" className="space-y-4 pt-2">
-                  <Select
-                    value={intent}
-                    onValueChange={(v) => setIntent(v as Intent)}
-                  >
+                  <Select value={intent} onValueChange={setIntent}>
                     <SelectTrigger>
                       <SelectValue placeholder="Intent" />
                     </SelectTrigger>
                     <SelectContent className="max-h-64" position="popper" side="bottom">
-                      {PROMPT_INTENTS.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Standard</SelectLabel>
+                        {PROMPT_INTENTS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      {customIntents.length > 0 && (
+                        <>
+                          <SelectSeparator />
+                          <SelectGroup>
+                            <SelectLabel>Custom</SelectLabel>
+                            {customIntents.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
-                  <Select
-                    value={structure}
-                    onValueChange={(v) => setStructure(v as Structure)}
-                  >
+
+                  <Select value={structure} onValueChange={(v) => setStructure(v as Structure)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Structure" />
                     </SelectTrigger>
