@@ -18,141 +18,135 @@ Return ONLY the final transformed output.`;
 
   if (customInstruction) {
     actionInstruction = `ACTION: ${customInstruction}`;
-    constraints = "Follow the user's custom instruction precisely.";
+    constraints = "Follow the user's custom instruction precisely. Do NOT chat.";
   } else {
     switch (intent) {
+      // --- TEXT REFINEMENT (Editing Content) ---
       case "general_polish":
         actionInstruction = "ACTION: Refine the User Input for better clarity, flow, and readability.";
-        constraints = "Keep the original meaning and tone. Remove redundancy.";
+        constraints = "Keep the original meaning. Do not add new information. Just polish the existing text.";
         break;
       case "fix_grammar":
-        actionInstruction = "ACTION: Correct all grammatical, spelling, and punctuation errors.";
-        constraints = "Do not change the style or vocabulary level. Only fix objective errors.";
+        actionInstruction = "ACTION: Fix all spelling, grammar, and punctuation errors.";
+        constraints = "Make NO other changes. Return the corrected text only.";
         break;
       case "professional_tone":
-        actionInstruction = "ACTION: Rewrite the User Input to sound formal, professional, and business-appropriate.";
-        constraints = "Avoid slang, contractions, and emotional outbursts. Use precise vocabulary.";
+        actionInstruction = "ACTION: Rewrite the User Input to sound formal, professional, and business-like.";
         break;
       case "casual_tone":
-        actionInstruction = "ACTION: Rewrite the User Input to sound friendly, conversational, and relaxed.";
-        constraints = "Use accessible language. Avoid stiff corporate phrasing.";
+        actionInstruction = "ACTION: Rewrite the User Input to sound friendly and conversational.";
         break;
       case "academic_tone":
-        actionInstruction = "ACTION: Elevate the User Input to an academic/scholarly standard.";
-        constraints = "Use sophisticated vocabulary and precise structural logic.";
+        actionInstruction = "ACTION: Rewrite the User Input using academic vocabulary and structure.";
         break;
       case "urgent_tone":
-        actionInstruction = "ACTION: Rewrite the User Input to convey urgency and directness.";
-        constraints = "Remove pleasantries and filler. Use short, active sentences.";
+        actionInstruction = "ACTION: Rewrite the User Input to be direct, punchy, and urgent.";
         break;
       case "empathetic_tone":
-        actionInstruction = "ACTION: Rewrite the User Input to be more empathetic, understanding, and soft.";
-        constraints = "Focus on emotional resonance and support.";
+        actionInstruction = "ACTION: Rewrite the User Input to be kind, supportive, and empathetic.";
         break;
       case "simplify":
-        actionInstruction = "ACTION: Rewrite the User Input so it can be understood by a 5-year-old.";
-        constraints = "Use extremely simple words and short sentences.";
+        actionInstruction = "ACTION: Simplify the User Input for a 5-year-old reader.";
         break;
       case "summarize":
-        actionInstruction = "ACTION: Provide a concise summary of the User Input.";
-        constraints = "Capture only the most critical information. Discard details.";
+        actionInstruction = "ACTION: Summarize the User Input into key points.";
         break;
       case "expand":
-        actionInstruction = "ACTION: Expand upon the User Input with relevant context and details.";
-        constraints = "Maintain the original topic. Elaborate on existing points logically.";
+        actionInstruction = "ACTION: Expand the User Input with relevant context/details.";
         break;
       case "dejargonize":
-        actionInstruction = "ACTION: Remove industry jargon and buzzwords from the User Input.";
-        constraints = "Replace complex terms with plain English equivalents.";
+        actionInstruction = "ACTION: Replace all jargon in the User Input with plain English.";
         break;
 
-      // PROMPT ENGINEERING
+      // --- PROMPT ENGINEERING (Optimizing Prompts for ChatGPT) ---
       case "cot":
-        actionInstruction = "ACTION: Rewrite the User Input into a prompt that explicitly instructs an AI to use 'Chain of Thought' reasoning.";
-        constraints = "Start with instructions like 'Think step-by-step...' followed by the user's request.";
+        // REFINED: Explicitly ask for the solution AND the steps
+        actionInstruction = "ACTION: Rewrite the User Input into a detailed prompt that asks an AI to solve the problem step-by-step and then provide the final solution/code.";
+        constraints = "Ensure the prompt asks for the FINAL OUTPUT (e.g., code, answer) after the reasoning steps.";
         break;
       case "tree_of_thoughts":
-        actionInstruction = "ACTION: Rewrite the User Input into a prompt that instructs an AI to use 'Tree of Thoughts' methodology.";
-        constraints = "Ask the AI to explore multiple solution paths before concluding.";
+        actionInstruction = "ACTION: Rewrite the User Input into a complex AI prompt that enforces 'Tree of Thoughts' exploration.";
+        constraints = "The output must be a PROMPT instructing an AI to explore multiple paths before giving the final answer.";
         break;
       case "socratic":
-        actionInstruction = "ACTION: Rewrite the User Input into a prompt that instructs an AI to act as a Socratic Tutor.";
-        constraints = "Tell the AI NOT to give the answer, but to ask guiding questions.";
+        actionInstruction = "ACTION: Rewrite the User Input into a system prompt that creates a Socratic Tutor persona.";
         break;
       case "feynman":
-        actionInstruction = "ACTION: Rewrite the User Input into a prompt that asks an AI to explain the concept using the Feynman Technique.";
+        actionInstruction = "ACTION: Rewrite the User Input into a prompt that asks for a simple, Feynman-style explanation.";
         break;
       case "devils_advocate":
-        actionInstruction = "ACTION: Rewrite the User Input into a prompt that asks an AI to critique the user's argument.";
+        actionInstruction = "ACTION: Rewrite the User Input into a prompt that asks an AI to critique and challenge arguments.";
         break;
       case "compression":
-        actionInstruction = "ACTION: Compress the User Input into the minimal number of tokens while retaining meaning.";
-        constraints = "Remove articles and conjunctions. Result should be telegraphic.";
+        actionInstruction = "ACTION: Compress the User Input to minimum tokens while keeping semantic meaning.";
+        constraints = "Telegraphic style. No filler words.";
         break;
       case "few_shot":
-        actionInstruction = "ACTION: Generate a 'Few-Shot' prompt template based on the User Input.";
-        constraints = "Create 3 example input/output pairs related to the topic.";
+        actionInstruction = "ACTION: Convert the User Input into a 'Few-Shot' prompt template with 3 examples.";
+        constraints = "Generate the examples based on the topic. Return the full prompt template.";
         break;
       case "persona":
-        actionInstruction = "ACTION: Rewrite the User Input into a prompt that instructs the AI to adopt a specific expert persona.";
+        actionInstruction = "ACTION: Rewrite the User Input into a prompt that assigns a specific Expert Persona to the AI.";
+        constraints = "Identify the best expert for the task and prepend it (e.g., 'Act as a Senior Engineer...').";
         break;
       case "critic":
-        actionInstruction = "ACTION: Rewrite the User Input into a prompt that asks an AI to critique the input's style and substance.";
+        actionInstruction = "ACTION: Rewrite the User Input into a prompt that asks an AI to critique the input.";
         break;
 
-      // DOMAIN SPECIFIC
+      // --- DOMAIN SPECIFIC (Generation) ---
       case "code_expert":
-        actionInstruction = "ACTION: Treat the User Input as a coding requirement. Write (or rewrite) the code using industry best practices.";
+        // REFINED: Stronger push for code generation
+        actionInstruction = "ACTION: Rewrite the User Input into a prompt that strictly asks for high-quality, production-ready code.";
+        constraints = "The prompt should explicitly request comments, error handling, and best practices. It must ask for the CODE itself, not just a guide.";
         break;
       case "code_commenter":
-        actionInstruction = "ACTION: Add comprehensive documentation comments to the code in the User Input.";
+        actionInstruction = "ACTION: Add documentation comments to the code in the User Input.";
         break;
       case "bug_hunter":
-        actionInstruction = "ACTION: Analyze the code in the User Input for bugs. Return the fixed code.";
+        actionInstruction = "ACTION: Fix bugs in the provided code snippet.";
         break;
       case "unit_test":
-        actionInstruction = "ACTION: Generate comprehensive unit tests for the code in the User Input.";
+        actionInstruction = "ACTION: Write unit tests for the provided code.";
         break;
       case "sec_auditor":
-        actionInstruction = "ACTION: Audit the User Input for security vulnerabilities and suggest fixes.";
+        actionInstruction = "ACTION: Analyze the text/code for security flaws.";
         break;
       case "copywriter":
-        actionInstruction = "ACTION: Rewrite the User Input as high-conversion marketing copy.";
+        actionInstruction = "ACTION: Rewrite the User Input as high-converting marketing copy.";
         break;
       case "seo_optimizer":
-        actionInstruction = "ACTION: Optimize the User Input for Search Engines (SEO).";
+        actionInstruction = "ACTION: Optimize the User Input for SEO keywords.";
         break;
       case "exec_summary":
-        actionInstruction = "ACTION: Summarize the User Input into a C-Suite Executive Brief.";
-        constraints = "BLUF (Bottom Line Up Front). Focus on ROI and strategic impact.";
+        actionInstruction = "ACTION: Rewrite the User Input as an Executive Summary (BLUF).";
         break;
       case "storyteller":
-        actionInstruction = "ACTION: Rewrite the User Input as a compelling narrative story.";
+        actionInstruction = "ACTION: Rewrite the User Input as a narrative story.";
         break;
       case "world_builder":
-        actionInstruction = "ACTION: Expand the User Input into a rich description of a fictional world/setting.";
+        actionInstruction = "ACTION: Expand the User Input into a rich setting description.";
         break;
       case "screenplay":
-        actionInstruction = "ACTION: Format the User Input as a standard Hollywood Screenplay.";
+        actionInstruction = "ACTION: Format the User Input as a Hollywood Screenplay.";
         break;
     }
   }
 
   let formatInstruction = "";
   switch (structure) {
-    case "para": formatInstruction = "FORMAT: Standard prose paragraphs."; break;
+    case "para": formatInstruction = "FORMAT: Standard prose paragraphs. No Markdown blocks."; break;
     case "bullets": formatInstruction = "FORMAT: Bulleted list (use '*')."; break;
     case "steps": formatInstruction = "FORMAT: Numbered list (1., 2., 3.)."; break;
     case "checklist": formatInstruction = "FORMAT: Markdown checklist ('- [ ]')."; break;
-    case "json": formatInstruction = "FORMAT: Valid JSON only. No markdown blocks."; break;
+    case "json": formatInstruction = "FORMAT: Valid JSON only. NO conversational text."; break;
     case "csv": formatInstruction = "FORMAT: Valid CSV with header row."; break;
     case "markdown_table": formatInstruction = "FORMAT: Markdown table."; break;
     case "yaml": formatInstruction = "FORMAT: Valid YAML only."; break;
     case "xml": formatInstruction = "FORMAT: Valid XML only."; break;
     case "mermaid": formatInstruction = "FORMAT: Mermaid.js diagram syntax."; break;
-    case "latex": formatInstruction = "FORMAT: LaTeX syntax for math/structure."; break;
-    case "code_only": formatInstruction = "FORMAT: Code block only. No conversational text."; break;
-    case "tldr": formatInstruction = "FORMAT: Single sentence TL;DR."; break;
+    case "latex": formatInstruction = "FORMAT: LaTeX syntax."; break;
+    case "code_only": formatInstruction = "FORMAT: Code block only. NO intro/outro text."; break;
+    case "tldr": formatInstruction = "FORMAT: Single sentence."; break;
   }
 
   return `${BASE_SYSTEM}\n\n${actionInstruction}\n${constraints}\n${formatInstruction}`;
@@ -178,15 +172,12 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
       return;
     }
 
-    // 1. Retrieve the Model Preference
     const { openai_model } = await new Promise<{ openai_model?: string }>((resolve) => {
       chrome.storage.local.get("openai_model", (res) => resolve(res));
     });
 
-    // Default to gpt-4o-mini if not set
     const selectedModel = openai_model || "gpt-4o-mini";
 
-    // 2. Track usage
     chrome.storage.local.get("daily_usage", (res) => {
       const usageData = res.daily_usage || { count: 0, lastReset: Date.now() };
       const now = Date.now();
@@ -218,7 +209,7 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: selectedModel, // Use the selected model
+          model: selectedModel,
           stream: true,
           messages: [
             { role: "system", content: systemPrompt },
@@ -268,7 +259,7 @@ export function useImproveAI({ apiKey, domain }: UseImproveAIProps) {
                   }
                 }
               } catch (e) {
-                // Ignore parse errors on partial chunks
+                // Ignore partial JSON chunks
               }
             }
           }
