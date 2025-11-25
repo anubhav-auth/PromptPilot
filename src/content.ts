@@ -35,11 +35,11 @@ function showIcon(target: HTMLElement) {
   icon.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
   icon.style.transition = "transform 0.2s ease";
 
-  // Position icon inside the right edge of the input
   const rect = target.getBoundingClientRect();
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
   
+  // Position icon inside the right edge of the input
   icon.style.top = `${scrollY + rect.top + (rect.height > 30 ? 10 : rect.height / 2 - 12)}px`;
   icon.style.left = `${scrollX + rect.right - 32}px`;
 
@@ -111,12 +111,12 @@ function openModal(target: HTMLElement) {
   );
 
   const modalWidth = 450;
-  const modalHeight = 500; // Slightly taller for better UX
-  const padding = 16; // Padding from screen edges
+  const modalHeight = 500;
+  const padding = 16;
 
   modalIframe.style.position = "absolute";
   modalIframe.style.border = "none";
-  modalIframe.style.zIndex = "2147483647"; // Max safe z-index
+  modalIframe.style.zIndex = "2147483647";
   modalIframe.style.backgroundColor = "transparent";
   modalIframe.style.width = `${modalWidth}px`;
   modalIframe.style.height = `${modalHeight}px`;
@@ -129,35 +129,27 @@ function openModal(target: HTMLElement) {
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
 
-  // --- INTELLIGENT POSITIONING LOGIC ---
-
-  // 1. Vertical Alignment
+  // --- INTELLIGENT POSITIONING ---
   const spaceBelow = viewportHeight - rect.bottom;
   const spaceAbove = rect.top;
   let topPos;
 
   if (spaceBelow >= modalHeight + padding) {
-    // Prefer below
     topPos = scrollY + rect.bottom + 8;
   } else if (spaceAbove >= modalHeight + padding) {
-    // Fallback above
     topPos = scrollY + rect.top - modalHeight - 8;
   } else {
-    // If neither fits perfectly, center vertically relative to viewport, but clamp to document bounds
+    // Center if it fits nowhere perfectly
     const viewportCenter = scrollY + viewportHeight / 2 - modalHeight / 2;
     topPos = Math.max(scrollY + padding, viewportCenter);
   }
 
-  // 2. Horizontal Alignment
-  // Default: Align right edge of modal with right edge of input
   let leftPos = scrollX + rect.right - modalWidth;
 
-  // Clamp to left viewport edge
+  // Clamp to viewport
   if (leftPos < scrollX + padding) {
     leftPos = scrollX + padding;
   }
-
-  // Clamp to right viewport edge
   if (leftPos + modalWidth > scrollX + viewportWidth - padding) {
     leftPos = scrollX + viewportWidth - modalWidth - padding;
   }
@@ -166,8 +158,6 @@ function openModal(target: HTMLElement) {
   modalIframe.style.left = `${leftPos}px`;
 
   document.body.appendChild(modalIframe);
-  
-  // Add overlay to catch clicks outside
   document.addEventListener("click", handleClickOutside, true);
 }
 
@@ -186,16 +176,12 @@ function closeModal() {
 }
 
 function handleClickOutside(event: MouseEvent) {
-  // Check if click is outside the iframe and icon
   const target = event.target as Node;
   if (
     modalIframe &&
     activeIcon &&
     !activeIcon.contains(target)
   ) {
-    // We can't detect clicks *inside* the iframe from here due to cross-origin/frame rules usually,
-    // but this listener is on the main document. 
-    // If the user clicks anywhere on the main page, close the modal.
     closeModal();
   }
 }
@@ -203,7 +189,6 @@ function handleClickOutside(event: MouseEvent) {
 window.addEventListener(
   "message",
   (event) => {
-    // Security check: ensure message is from our extension
     if (event.data.type === "prompt-pilot-close-modal") {
       closeModal();
     } else if (event.data.type === "prompt-pilot-replace-text" && activeInput) {
@@ -212,10 +197,8 @@ window.addEventListener(
       const textBeforeTrigger =
         triggerIndex !== -1 ? fullText.substring(0, triggerIndex) : fullText;
 
-      // Replace everything after trigger with new text
       const newText = textBeforeTrigger + event.data.text;
       setElementText(activeInput, newText);
-
       closeModal();
     }
   },
@@ -234,25 +217,27 @@ function handleInput(event: Event) {
 }
 
 function attachListener(element: HTMLElement) {
-  // Debounce could be added here if performance issues arise
   element.addEventListener("input", handleInput);
 }
 
 function observeDocument() {
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  
   const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement) {
-          const inputs = node.querySelectorAll(
-            'textarea, input, [contenteditable="true"]',
-          );
-          inputs.forEach((el) => attachListener(el as HTMLElement));
-          if (node.matches('textarea, input, [contenteditable="true"]')) {
-            attachListener(node as HTMLElement);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof HTMLElement) {
+            const inputs = node.querySelectorAll('textarea, input, [contenteditable="true"]');
+            inputs.forEach((el) => attachListener(el as HTMLElement));
+            if (node.matches('textarea, input, [contenteditable="true"]')) {
+              attachListener(node as HTMLElement);
+            }
           }
-        }
+        });
       });
-    });
+    }, 1000);
   });
 
   observer.observe(document.body, {
