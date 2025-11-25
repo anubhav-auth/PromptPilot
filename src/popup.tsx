@@ -14,7 +14,6 @@ const PopupApp: React.FC = () => {
   const [hasKey, setHasKey] = useState(false);
 
   useEffect(() => {
-    // Check if user has already saved a key
     chrome.storage.local.get("openai_api_key", (result) => {
       if (result.openai_api_key) {
         setHasKey(true);
@@ -33,7 +32,6 @@ const PopupApp: React.FC = () => {
 
   return (
     <div className="p-6 flex flex-col items-center justify-center w-[300px] h-[400px] bg-background">
-      {/* Logic: If no key, force them to Settings. Otherwise, allow Dashboard. */}
       {view === "settings" || !hasKey ? (
         <Settings onBack={() => setView("dashboard")} />
       ) : (
@@ -44,4 +42,5 @@ const PopupApp: React.FC = () => {
   );
 };
 
+// Render the application
 createRoot(document.getElementById("root")!).render(<PopupApp />);
