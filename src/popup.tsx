@@ -1,7 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import AuthForm from "@/components/AuthForm";
 import Dashboard from "@/components/Dashboard";
 import Settings from "@/components/Settings";
 import { Toaster } from "@/components/ui/sonner";
@@ -10,9 +8,20 @@ import "@/globals.css";
 
 type View = "dashboard" | "settings";
 
-const PopupAppContent: React.FC = () => {
-  const { user, isLoading } = useAuth();
+const PopupApp: React.FC = () => {
   const [view, setView] = useState<View>("dashboard");
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasKey, setHasKey] = useState(false);
+
+  useEffect(() => {
+    // Check if user has already saved a key
+    chrome.storage.local.get("openai_api_key", (result) => {
+      if (result.openai_api_key) {
+        setHasKey(true);
+      }
+      setIsLoading(false);
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -22,32 +31,17 @@ const PopupAppContent: React.FC = () => {
     );
   }
 
-  const renderContent = () => {
-    if (!user) {
-      return <AuthForm />;
-    }
-    switch (view) {
-      case "settings":
-        return <Settings onBack={() => setView("dashboard")} />;
-      case "dashboard":
-      default:
-        return <Dashboard onShowSettings={() => setView("settings")} />;
-    }
-  };
-
   return (
     <div className="p-6 flex flex-col items-center justify-center w-[300px] h-[400px] bg-background">
-      {renderContent()}
+      {/* Logic: If no key, force them to Settings. Otherwise, allow Dashboard. */}
+      {view === "settings" || !hasKey ? (
+        <Settings onBack={() => setView("dashboard")} />
+      ) : (
+        <Dashboard onShowSettings={() => setView("settings")} />
+      )}
+      <Toaster richColors position="bottom-center" />
     </div>
   );
 };
 
-const PopupApp: React.FC = () => (
-  <AuthProvider>
-    <PopupAppContent />
-    <Toaster richColors position="bottom-center" />
-  </AuthProvider>
-);
-
-// Render the application into the popup.html root
 createRoot(document.getElementById("root")!).render(<PopupApp />);

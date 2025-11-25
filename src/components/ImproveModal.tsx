@@ -55,7 +55,6 @@ const ImproveModal: React.FC<ImproveModalProps> = ({ onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultText, setResultText] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
   const [activeTab, setActiveTab] = useState("text");
 
   useEffect(() => {

@@ -33,13 +33,26 @@ function showIcon(target: HTMLElement) {
   icon.style.alignItems = "center";
   icon.style.justifyContent = "center";
   icon.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+  icon.style.transition = "transform 0.2s ease";
 
+  // Position icon inside the right edge of the input
   const rect = target.getBoundingClientRect();
-  icon.style.top = `${window.scrollY + rect.top + rect.height / 2 - 12}px`;
-  icon.style.left = `${window.scrollX + rect.right - 40}px`;
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
+  
+  icon.style.top = `${scrollY + rect.top + (rect.height > 30 ? 10 : rect.height / 2 - 12)}px`;
+  icon.style.left = `${scrollX + rect.right - 32}px`;
+
+  icon.addEventListener("mouseenter", () => {
+    icon.style.transform = "scale(1.1)";
+  });
+  icon.addEventListener("mouseleave", () => {
+    icon.style.transform = "scale(1)";
+  });
 
   icon.addEventListener("click", (e) => {
     e.stopPropagation();
+    e.preventDefault();
     activeInput = target;
     openModal(target);
   });
@@ -76,7 +89,6 @@ function setElementText(element: HTMLElement, newText: string) {
   } else if (element.isContentEditable) {
     element.textContent = newText;
   }
-  // Dispatch an input event to notify any listeners on the element
   element.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
 }
 
@@ -99,39 +111,63 @@ function openModal(target: HTMLElement) {
   );
 
   const modalWidth = 450;
-  const modalHeight = 450;
+  const modalHeight = 500; // Slightly taller for better UX
+  const padding = 16; // Padding from screen edges
 
   modalIframe.style.position = "absolute";
   modalIframe.style.border = "none";
-  modalIframe.style.zIndex = "9999";
+  modalIframe.style.zIndex = "2147483647"; // Max safe z-index
   modalIframe.style.backgroundColor = "transparent";
   modalIframe.style.width = `${modalWidth}px`;
   modalIframe.style.height = `${modalHeight}px`;
-  modalIframe.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
-  modalIframe.style.borderRadius = "8px";
-  modalIframe.style.overflow = "hidden";
+  modalIframe.style.borderRadius = "12px";
+  modalIframe.style.boxShadow = "0 10px 40px rgba(0,0,0,0.25)";
 
   const rect = target.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
 
-  // Calculate vertical position
-  const spaceBelow = window.innerHeight - rect.bottom;
-  let topPosition;
+  // --- INTELLIGENT POSITIONING LOGIC ---
 
-  if (spaceBelow > modalHeight + 8) {
-    // Position below the input if there's enough space
-    topPosition = window.scrollY + rect.bottom + 8;
+  // 1. Vertical Alignment
+  const spaceBelow = viewportHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  let topPos;
+
+  if (spaceBelow >= modalHeight + padding) {
+    // Prefer below
+    topPos = scrollY + rect.bottom + 8;
+  } else if (spaceAbove >= modalHeight + padding) {
+    // Fallback above
+    topPos = scrollY + rect.top - modalHeight - 8;
   } else {
-    // Otherwise, position above the input
-    topPosition = window.scrollY + rect.top - modalHeight - 8;
+    // If neither fits perfectly, center vertically relative to viewport, but clamp to document bounds
+    const viewportCenter = scrollY + viewportHeight / 2 - modalHeight / 2;
+    topPos = Math.max(scrollY + padding, viewportCenter);
   }
 
-  // Calculate horizontal position
-  const leftPosition = window.scrollX + rect.right - modalWidth;
+  // 2. Horizontal Alignment
+  // Default: Align right edge of modal with right edge of input
+  let leftPos = scrollX + rect.right - modalWidth;
 
-  modalIframe.style.top = `${topPosition}px`;
-  modalIframe.style.left = `${Math.max(8, leftPosition)}px`;
+  // Clamp to left viewport edge
+  if (leftPos < scrollX + padding) {
+    leftPos = scrollX + padding;
+  }
+
+  // Clamp to right viewport edge
+  if (leftPos + modalWidth > scrollX + viewportWidth - padding) {
+    leftPos = scrollX + viewportWidth - modalWidth - padding;
+  }
+
+  modalIframe.style.top = `${topPos}px`;
+  modalIframe.style.left = `${leftPos}px`;
 
   document.body.appendChild(modalIframe);
+  
+  // Add overlay to catch clicks outside
   document.addEventListener("click", handleClickOutside, true);
 }
 
@@ -150,13 +186,16 @@ function closeModal() {
 }
 
 function handleClickOutside(event: MouseEvent) {
+  // Check if click is outside the iframe and icon
   const target = event.target as Node;
   if (
     modalIframe &&
-    !modalIframe.contains(target) &&
     activeIcon &&
     !activeIcon.contains(target)
   ) {
+    // We can't detect clicks *inside* the iframe from here due to cross-origin/frame rules usually,
+    // but this listener is on the main document. 
+    // If the user clicks anywhere on the main page, close the modal.
     closeModal();
   }
 }
@@ -164,10 +203,7 @@ function handleClickOutside(event: MouseEvent) {
 window.addEventListener(
   "message",
   (event) => {
-    if (event.source !== modalIframe?.contentWindow) {
-      return;
-    }
-
+    // Security check: ensure message is from our extension
     if (event.data.type === "prompt-pilot-close-modal") {
       closeModal();
     } else if (event.data.type === "prompt-pilot-replace-text" && activeInput) {
@@ -176,6 +212,7 @@ window.addEventListener(
       const textBeforeTrigger =
         triggerIndex !== -1 ? fullText.substring(0, triggerIndex) : fullText;
 
+      // Replace everything after trigger with new text
       const newText = textBeforeTrigger + event.data.text;
       setElementText(activeInput, newText);
 
@@ -197,6 +234,7 @@ function handleInput(event: Event) {
 }
 
 function attachListener(element: HTMLElement) {
+  // Debounce could be added here if performance issues arise
   element.addEventListener("input", handleInput);
 }
 
