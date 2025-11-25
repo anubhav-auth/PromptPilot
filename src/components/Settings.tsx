@@ -6,6 +6,13 @@ import { ArrowLeft, CheckCircle2, AlertCircle, Loader2, Plus, Trash2 } from "luc
 import { showSuccess, showError } from "@/utils/toast";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SettingsProps {
   onBack: () => void;
@@ -19,6 +26,7 @@ interface CustomIntent {
 
 const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState("gpt-4o-mini"); // Default model
   const [isValidating, setIsValidating] = useState(false);
   const [status, setStatus] = useState<"idle" | "valid" | "invalid">("idle");
   
@@ -28,7 +36,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
   const [newInstruction, setNewInstruction] = useState("");
 
   useEffect(() => {
-    chrome.storage.local.get(["openai_api_key", "custom_intents"], (result) => {
+    chrome.storage.local.get(["openai_api_key", "custom_intents", "openai_model"], (result) => {
       if (result.openai_api_key) {
         setApiKey(result.openai_api_key);
         setStatus("valid");
@@ -36,8 +44,18 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       if (result.custom_intents) {
         setCustomIntents(result.custom_intents);
       }
+      if (result.openai_model) {
+        setModel(result.openai_model);
+      }
     });
   }, []);
+
+  const handleModelChange = (value: string) => {
+    setModel(value);
+    chrome.storage.local.set({ openai_model: value }, () => {
+      showSuccess(`Model changed to ${value}`);
+    });
+  };
 
   const validateAndSave = async () => {
     if (!apiKey.trim()) {
@@ -110,7 +128,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
           </Button>
           <CardTitle className="text-2xl font-bold text-primary">Settings</CardTitle>
         </div>
-        <CardDescription>Configure keys and custom prompts.</CardDescription>
+        <CardDescription>Configure keys, models, and prompts.</CardDescription>
       </CardHeader>
       
       <ScrollArea className="flex-grow">
@@ -145,6 +163,26 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             >
               {isValidating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Verify & Save"}
             </Button>
+          </div>
+
+          <Separator />
+
+          {/* Model Selection Section */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">AI Model</label>
+            <Select value={model} onValueChange={handleModelChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap)</SelectItem>
+                <SelectItem value="gpt-4o">GPT-4o (Smartest)</SelectItem>
+                <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              'GPT-4o Mini' is recommended for speed.
+            </p>
           </div>
 
           <Separator />
