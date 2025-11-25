@@ -39,7 +39,6 @@ function showIcon(target: HTMLElement) {
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
   
-  // Position icon inside the right edge of the input
   icon.style.top = `${scrollY + rect.top + (rect.height > 30 ? 10 : rect.height / 2 - 12)}px`;
   icon.style.left = `${scrollX + rect.right - 32}px`;
 
@@ -96,11 +95,19 @@ function openModal(target: HTMLElement) {
   if (modalIframe) return;
 
   const fullText = getElementText(target);
+  // Check if triggered via shortcut (no phrase) or typing (phrase exists)
   const triggerIndex = fullText.lastIndexOf(TRIGGER_PHRASE);
-  const textToImprove =
-    triggerIndex !== -1
-      ? fullText.substring(triggerIndex + TRIGGER_PHRASE.length)
-      : "";
+  
+  let textToImprove = "";
+  if (triggerIndex !== -1) {
+    // Triggered by typing "improve:"
+    textToImprove = fullText.substring(triggerIndex + TRIGGER_PHRASE.length);
+  } else {
+    // Triggered by shortcut (improve whole text or selection)
+    // For simplicity, we improve the whole text if no trigger phrase is found
+    textToImprove = fullText;
+  }
+
   const domain = window.location.hostname;
 
   modalIframe = document.createElement("iframe");
@@ -129,7 +136,6 @@ function openModal(target: HTMLElement) {
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
 
-  // --- INTELLIGENT POSITIONING ---
   const spaceBelow = viewportHeight - rect.bottom;
   const spaceAbove = rect.top;
   let topPos;
@@ -139,14 +145,12 @@ function openModal(target: HTMLElement) {
   } else if (spaceAbove >= modalHeight + padding) {
     topPos = scrollY + rect.top - modalHeight - 8;
   } else {
-    // Center if it fits nowhere perfectly
     const viewportCenter = scrollY + viewportHeight / 2 - modalHeight / 2;
     topPos = Math.max(scrollY + padding, viewportCenter);
   }
 
   let leftPos = scrollX + rect.right - modalWidth;
 
-  // Clamp to viewport
   if (leftPos < scrollX + padding) {
     leftPos = scrollX + padding;
   }
@@ -186,6 +190,7 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
+// 1. Listen for Iframe Messages (Close / Replace)
 window.addEventListener(
   "message",
   (event) => {
@@ -194,16 +199,42 @@ window.addEventListener(
     } else if (event.data.type === "prompt-pilot-replace-text" && activeInput) {
       const fullText = getElementText(activeInput);
       const triggerIndex = fullText.lastIndexOf(TRIGGER_PHRASE);
-      const textBeforeTrigger =
-        triggerIndex !== -1 ? fullText.substring(0, triggerIndex) : fullText;
+      
+      let newText = "";
+      if (triggerIndex !== -1) {
+         // Replace only the part after "improve:"
+         const textBeforeTrigger = fullText.substring(0, triggerIndex);
+         newText = textBeforeTrigger + event.data.text;
+      } else {
+         // Replace entire text (Shortcut mode)
+         newText = event.data.text;
+      }
 
-      const newText = textBeforeTrigger + event.data.text;
       setElementText(activeInput, newText);
       closeModal();
     }
   },
   false,
 );
+
+// 2. Listen for Background Messages (Keyboard Shortcut)
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === "trigger_cmd_modal") {
+    const activeEl = document.activeElement as HTMLElement;
+    // Check if the focused element is an input, textarea, or contenteditable
+    if (
+      activeEl && 
+      (activeEl instanceof HTMLInputElement || 
+       activeEl instanceof HTMLTextAreaElement || 
+       activeEl.isContentEditable)
+    ) {
+      activeInput = activeEl;
+      openModal(activeEl);
+    } else {
+      console.log("PromptPilot: No valid input field focused.");
+    }
+  }
+});
 
 function handleInput(event: Event) {
   const target = event.target as HTMLElement;
