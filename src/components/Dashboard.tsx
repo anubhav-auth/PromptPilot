@@ -27,7 +27,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
           size="icon" 
           className="absolute top-0 right-0" 
           onClick={onShowSettings}
-          title="Manage API Key"
+          title="Settings"
         >
           <SettingsIcon className="h-5 w-5" />
         </Button>
@@ -37,12 +37,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
           <CheckCircle2 className="w-12 h-12 text-green-500 mb-2" />
           <p className="text-lg font-semibold text-foreground">System Active</p>
           <p className="text-sm text-muted-foreground">
-            You are ready to improve text on any website.
+            You are ready to use the extension.
           </p>
         </div>
         
         <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">Session Usage</p>
+          <p className="text-sm font-medium text-muted-foreground">Improvements Today</p>
           <p className="text-3xl font-bold">{usageCount}</p>
         </div>
       </CardContent>
