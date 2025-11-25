@@ -1,40 +1,21 @@
 /// <reference types="chrome" />
 
-import { supabase } from "./integrations/supabase/client";
-
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "logEvent") {
-    handleLogEvent(message.data)
-      .then(() => sendResponse({ success: true }))
-      .catch((error) => sendResponse({ success: false, error: error.message }));
-    return true; // Indicates that the response is sent asynchronously
+    console.log("PromptPilot Log:", message.data);
+    sendResponse({ success: true });
+    return false;
   }
 });
 
-async function handleLogEvent(data: any) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    console.log("No user found, skipping log.");
-    return;
+// Listen for keyboard shortcuts defined in manifest.json
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "open-prompt-pilot") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        // Send a trigger message to the content script in the active tab
+        chrome.tabs.sendMessage(tabs[0].id, { type: "trigger_cmd_modal" });
+      }
+    });
   }
-
-  const logData = {
-    user_id: user.id,
-    domain: data.domain,
-    event_type: data.event_type,
-    intent: data.intent,
-    structure: data.structure,
-    tone: data.tone,
-    action_taken: data.action_taken,
-  };
-
-  const { error } = await supabase.from("improvement_logs").insert([logData]);
-
-  if (error) {
-    console.error("Error logging event to Supabase:", error);
-    throw error;
-  }
-}
+});
